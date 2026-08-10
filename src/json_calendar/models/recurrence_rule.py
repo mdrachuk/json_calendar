@@ -1,5 +1,7 @@
 """The RecurrenceRule and NDay objects (Section 3.3.3)."""
 
+from __future__ import annotations
+
 from typing import Annotated, Literal
 
 from pydantic import AfterValidator, Field, model_validator
@@ -8,26 +10,6 @@ from json_calendar._types import Int, LocalDateTime, UnsignedInt
 from json_calendar.models._base import JSCalendarObject
 
 WeekDay = Literal["mo", "tu", "we", "th", "fr", "sa", "su"]
-
-
-def _check_nonzero(value: int) -> int:
-    if value == 0:
-        raise ValueError("value must not be zero")
-    return value
-
-
-def _check_lowercase(value: str) -> str:
-    if value != value.lower():
-        raise ValueError(f"{value!r} must be lowercase")
-    return value
-
-
-class NDay(JSCalendarObject):
-    """A day of the week on which to repeat (Section 3.3.3)."""
-
-    type: Literal["NDay"] = Field(default="NDay", alias="@type")
-    day: WeekDay
-    nthOfPeriod: Annotated[Int, AfterValidator(_check_nonzero)] | None = None
 
 
 class RecurrenceRule(JSCalendarObject):
@@ -66,7 +48,7 @@ class RecurrenceRule(JSCalendarObject):
     until: LocalDateTime | None = None
 
     @model_validator(mode="after")
-    def _validate(self) -> "RecurrenceRule":
+    def _validate(self) -> RecurrenceRule:
         if self.count is not None and self.until is not None:
             raise ValueError('the "count" and "until" properties must not both be set')
         if self.rscale == "gregorian":
@@ -82,3 +64,27 @@ class RecurrenceRule(JSCalendarObject):
                             f"in the gregorian calendar system"
                         )
         return self
+
+
+class NDay(JSCalendarObject):
+    """A day of the week on which to repeat (Section 3.3.3)."""
+
+    type: Literal["NDay"] = Field(default="NDay", alias="@type")
+    day: WeekDay
+    nthOfPeriod: Annotated[Int, AfterValidator(_check_nonzero)] | None = None
+
+
+def _check_nonzero(value: int) -> int:
+    if value == 0:
+        raise ValueError("value must not be zero")
+    return value
+
+
+def _check_lowercase(value: str) -> str:
+    if value != value.lower():
+        raise ValueError(f"{value!r} must be lowercase")
+    return value
+
+
+NDay.model_rebuild()
+RecurrenceRule.model_rebuild()

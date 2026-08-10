@@ -10,6 +10,32 @@ from pydantic import AfterValidator, BaseModel, ConfigDict, Field, model_validat
 from json_calendar._types import is_valid_property_name
 
 
+def _check_text_content_type(value: str) -> str:
+    media_type, _, params = value.partition(";")
+    if not media_type.strip().lower().startswith("text/"):
+        raise ValueError(f"{value!r} is not a subtype of the 'text' media type")
+    for param in params.split(";"):
+        name, _, param_value = param.strip().partition("=")
+        if name.lower() == "charset" and param_value.strip('"').lower() != "utf-8":
+            raise ValueError("the 'charset' parameter value must be 'utf-8'")
+    return value
+
+
+def _check_color(value: str) -> str:
+    if value.startswith("#"):
+        hex_part = value[1:]
+        if len(hex_part) != 6 or any(c not in "0123456789abcdefABCDEF" for c in hex_part):
+            raise ValueError(f"{value!r} is not an RGB value in six-digit hexadecimal notation")
+    elif not value.isalpha():
+        raise ValueError(f"{value!r} is not a CSS color name")
+    return value
+
+
+JSCalendarVersion = Annotated[str, Field(pattern=r"^\d+\.\d+$")]
+TextContentType = Annotated[str, AfterValidator(_check_text_content_type)]
+Color = Annotated[str, AfterValidator(_check_color)]
+
+
 class JSCalendarObject(BaseModel):
     """Base class for all JSCalendar objects.
 
@@ -46,29 +72,3 @@ class JSCalendarObject(BaseModel):
             if not is_valid_property_name(key):
                 raise ValueError(f"{key!r} is not a valid property name")
         return self
-
-
-def _check_text_content_type(value: str) -> str:
-    media_type, _, params = value.partition(";")
-    if not media_type.strip().lower().startswith("text/"):
-        raise ValueError(f"{value!r} is not a subtype of the 'text' media type")
-    for param in params.split(";"):
-        name, _, param_value = param.strip().partition("=")
-        if name.lower() == "charset" and param_value.strip('"').lower() != "utf-8":
-            raise ValueError("the 'charset' parameter value must be 'utf-8'")
-    return value
-
-
-def _check_color(value: str) -> str:
-    if value.startswith("#"):
-        hex_part = value[1:]
-        if len(hex_part) != 6 or any(c not in "0123456789abcdefABCDEF" for c in hex_part):
-            raise ValueError(f"{value!r} is not an RGB value in six-digit hexadecimal notation")
-    elif not value.isalpha():
-        raise ValueError(f"{value!r} is not a CSS color name")
-    return value
-
-
-TextContentType = Annotated[str, AfterValidator(_check_text_content_type)]
-Color = Annotated[str, AfterValidator(_check_color)]
-JSCalendarVersion = Annotated[str, Field(pattern=r"^\d+\.\d+$")]

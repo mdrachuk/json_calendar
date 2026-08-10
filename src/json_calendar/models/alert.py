@@ -1,5 +1,7 @@
 """The Alert object and its triggers (Section 3.5.1)."""
 
+from __future__ import annotations
+
 from typing import Annotated, Any, Literal
 
 from pydantic import BeforeValidator, Field, model_validator
@@ -9,6 +11,16 @@ from json_calendar.models._base import JSCalendarObject
 from json_calendar.models.relation import Relation
 
 AlertAction = Annotated[str, open_enum("display", "email")]
+
+
+class Alert(JSCalendarObject):
+    """An alert/reminder for a calendar object (Section 3.5.1)."""
+
+    type: Literal["Alert"] = Field(default="Alert", alias="@type")
+    trigger: Trigger
+    acknowledged: UTCDateTime | None = None
+    relatedTo: dict[str, Relation] | None = None
+    action: AlertAction = "display"
 
 
 class OffsetTrigger(JSCalendarObject):
@@ -32,7 +44,7 @@ class UnknownTrigger(JSCalendarObject):
     type: str = Field(alias="@type")
 
     @model_validator(mode="after")
-    def _type_is_unknown(self) -> "UnknownTrigger":
+    def _type_is_unknown(self) -> UnknownTrigger:
         if self.type in ("OffsetTrigger", "AbsoluteTrigger"):
             raise ValueError(f"{self.type!r} is a known trigger type")
         return self
@@ -53,12 +65,4 @@ Trigger = Annotated[
     OffsetTrigger | AbsoluteTrigger | UnknownTrigger, BeforeValidator(_dispatch_trigger)
 ]
 
-
-class Alert(JSCalendarObject):
-    """An alert/reminder for a calendar object (Section 3.5.1)."""
-
-    type: Literal["Alert"] = Field(default="Alert", alias="@type")
-    trigger: Trigger
-    acknowledged: UTCDateTime | None = None
-    relatedTo: dict[str, Relation] | None = None
-    action: AlertAction = "display"
+Alert.model_rebuild()

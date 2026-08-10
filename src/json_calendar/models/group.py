@@ -1,5 +1,7 @@
 """The Group object (Sections 2.3 and 4.3)."""
 
+from __future__ import annotations
+
 from typing import Annotated, Any, Literal
 
 from pydantic import BeforeValidator, Field, model_validator
@@ -15,28 +17,6 @@ from json_calendar.models.calendar_object import CalendarObject
 from json_calendar.models.event import Event
 from json_calendar.models.link import Link
 from json_calendar.models.task import Task
-
-
-class UnknownCalendarObject(JSCalendarObject):
-    """A Group entry whose "@type" is not recognized; preserved as-is."""
-
-    type: str = Field(alias="@type")
-
-
-def _dispatch_entry(value: Any) -> Any:
-    if isinstance(value, dict):
-        entry_type = value.get("@type")
-        if entry_type is None:
-            raise ValueError('Group entries must set the "@type" property')
-        if entry_type == "Event":
-            return Event.model_validate(value)
-        if entry_type == "Task":
-            return Task.model_validate(value)
-        return UnknownCalendarObject.model_validate(value)
-    return value
-
-
-GroupEntry = Annotated[Event | Task | UnknownCalendarObject, BeforeValidator(_dispatch_entry)]
 
 
 class Group(JSCalendarObject):
@@ -60,7 +40,7 @@ class Group(JSCalendarObject):
     source: Uri | None = None
 
     @model_validator(mode="after")
-    def _entries_must_not_set_version(self) -> "Group":
+    def _entries_must_not_set_version(self) -> Group:
         for entry in self.entries:
             if isinstance(entry, CalendarObject) and "version" in entry.model_fields_set:
                 raise ValueError(
@@ -68,3 +48,27 @@ class Group(JSCalendarObject):
                     'set the "version" property'
                 )
         return self
+
+
+class UnknownCalendarObject(JSCalendarObject):
+    """A Group entry whose "@type" is not recognized; preserved as-is."""
+
+    type: str = Field(alias="@type")
+
+
+def _dispatch_entry(value: Any) -> Any:
+    if isinstance(value, dict):
+        entry_type = value.get("@type")
+        if entry_type is None:
+            raise ValueError('Group entries must set the "@type" property')
+        if entry_type == "Event":
+            return Event.model_validate(value)
+        if entry_type == "Task":
+            return Task.model_validate(value)
+        return UnknownCalendarObject.model_validate(value)
+    return value
+
+
+GroupEntry = Annotated[Event | Task | UnknownCalendarObject, BeforeValidator(_dispatch_entry)]
+
+Group.model_rebuild()
