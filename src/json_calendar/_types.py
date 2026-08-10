@@ -16,6 +16,8 @@ from pydantic import (
     StringConstraints,
 )
 
+from json_calendar._patch import check_no_prefix_collisions, parse_pointer
+
 MAX_INT = 2**53 - 1
 
 Id = Annotated[str, StringConstraints(min_length=1, max_length=255, pattern=r"^[A-Za-z0-9\-_]+$")]
@@ -93,8 +95,20 @@ def _check_time_zone_id(value: str) -> str:
 
 TimeZoneId = Annotated[str, AfterValidator(_check_time_zone_id)]
 
-PatchObject = dict[str, Any]
-"""An unordered set of patches on a JSON object (Section 1.5.9)."""
+
+def _check_patch_object(patch: dict[str, Any]) -> dict[str, Any]:
+    check_no_prefix_collisions({key: parse_pointer(key) for key in patch})
+    return patch
+
+
+PatchObject = Annotated[dict[str, Any], AfterValidator(_check_patch_object)]
+"""An unordered set of patches on a JSON object (Section 1.5.9).
+
+Each key is a JSON Pointer with an implicit leading "/". The type checks
+the pointer syntax and that no pointer is a prefix of another; the rules
+that depend on the object being patched are checked where the patch is
+applied (e.g. "recurrenceOverrides", Section 3.3.4).
+"""
 
 _URI = re.compile(r"^[A-Za-z][A-Za-z0-9+.\-]*:\S+$")
 _EMAIL = re.compile(r"^[^@\s]+@[^@\s]+$")

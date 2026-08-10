@@ -2,8 +2,9 @@
 
 from typing import Annotated, Literal
 
-from pydantic import Field, model_validator
+from pydantic import Field, ValidationError, model_validator
 
+from json_calendar._patch import apply_patch
 from json_calendar._types import (
     Email,
     Id,
@@ -28,6 +29,31 @@ from json_calendar.models.location import Location, VirtualLocation
 from json_calendar.models.participant import Participant
 from json_calendar.models.recurrence_rule import RecurrenceRule
 from json_calendar.models.relation import Relation
+
+_IGNORED_OVERRIDE_POINTERS = frozenset(
+    {
+        ("@type",),
+        ("method",),
+        ("organizerCalendarAddress",),
+        ("privacy",),
+        ("prodId",),
+        ("recurrenceId",),
+        ("recurrenceIdTimeZone",),
+        ("sentBy",),
+        ("uid",),
+    }
+)
+_IGNORED_OVERRIDE_FIRST_TOKENS = frozenset({"recurrenceOverrides", "recurrenceRule", "relatedTo"})
+
+
+def _ignored_in_override(tokens: list[str]) -> bool:
+    """Whether a recurrence override pointer MUST be ignored (Section 3.3.4)."""
+    return (
+        tuple(tokens) in _IGNORED_OVERRIDE_POINTERS
+        or tokens[0] in _IGNORED_OVERRIDE_FIRST_TOKENS
+        or (len(tokens) == 3 and tokens[0] == "participants" and tokens[2] == "calendarAddress")
+    )
+
 
 FreeBusyStatus = Annotated[str, open_enum("free", "busy")]
 Privacy = Annotated[str, open_enum("public", "private", "secret")]
@@ -88,11 +114,29 @@ class CalendarObject(JSCalendarObject):
                 )
         elif self.recurrenceIdTimeZone is not None:
             raise ValueError('"recurrenceIdTimeZone" must not be set if "recurrenceId" is not set')
-        for patch in (self.recurrenceOverrides or {}).values():
-            if "excluded" in patch and patch != {"excluded": True}:
+        for recurrence_id, patch in (self.recurrenceOverrides or {}).items():
+            if "excluded" in patch:
+                if patch != {"excluded": True}:
+                    raise ValueError(
+                        'an override excluding an occurrence must be exactly {"excluded": true}'
+                    )
+                continue
+            occurrence = self.model_dump(
+                mode="json",
+                exclude_unset=True,
+                exclude_none=True,
+                exclude={"recurrenceRule", "recurrenceOverrides"},
+            )
+            occurrence["recurrenceId"] = recurrence_id.strftime("%Y-%m-%dT%H:%M:%S")
+            occurrence["start"] = occurrence["recurrenceId"]
+            apply_patch(occurrence, patch, ignore=_ignored_in_override)
+            try:
+                type(self).model_validate(occurrence)
+            except ValidationError as error:
                 raise ValueError(
-                    'an override excluding an occurrence must be exactly {"excluded": true}'
-                )
+                    f"the {recurrence_id.isoformat()} override patches the occurrence "
+                    f"into an invalid object: {error}"
+                ) from error
         has_scheduled_participant = any(
             participant.calendarAddress is not None
             for participant in (self.participants or {}).values()
