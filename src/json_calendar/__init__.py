@@ -7,14 +7,45 @@ pydantic, a recurrence engine, and a converter to/from iCalendar.
 Spec: https://www.ietf.org/archive/id/draft-ietf-calext-jscalendarbis-18.html
 """
 
-from json_calendar.models import Event, Group, JSCalendarObject, Task
+from json_calendar.models import (
+    AbsoluteTrigger,
+    Alert,
+    CalendarObject,
+    Event,
+    Group,
+    JSCalendarObject,
+    Link,
+    Location,
+    NDay,
+    OffsetTrigger,
+    Participant,
+    RecurrenceRule,
+    Relation,
+    Task,
+    UnknownCalendarObject,
+    UnknownTrigger,
+    VirtualLocation,
+)
 
 __version__ = "0.1.0"
 
 __all__ = [
+    "AbsoluteTrigger",
+    "Alert",
+    "CalendarObject",
     "Event",
     "Group",
     "JSCalendarObject",
+    "Link",
+    "Location",
+    "NDay",
+    "OffsetTrigger",
+    "Participant",
+    "RecurrenceRule",
+    "Relation",
     "Task",
+    "UnknownCalendarObject",
+    "UnknownTrigger",
+    "VirtualLocation",
     "__version__",
 ]

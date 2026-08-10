@@ -25,6 +25,7 @@ classifiers = [
 ]
 dependencies = [
     "pydantic>=2.11",
+    "tzdata>=2024.1",
 ]
 
 [project.urls]
