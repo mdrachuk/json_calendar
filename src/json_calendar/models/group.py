@@ -4,7 +4,8 @@ from typing import Annotated, Any, Literal
 
 from pydantic import BeforeValidator, Field, model_validator
 
-from json_calendar.models.base import (
+from json_calendar._types import Id, LanguageTag, Uri, UTCDateTime
+from json_calendar.models._base import (
     Color,
     JSCalendarObject,
     JSCalendarVersion,
@@ -14,7 +15,6 @@ from json_calendar.models.calendar_object import CalendarObject
 from json_calendar.models.event import Event
 from json_calendar.models.link import Link
 from json_calendar.models.task import Task
-from json_calendar.types import Id, LanguageTag, Uri, UTCDateTime
 
 
 class UnknownCalendarObject(JSCalendarObject):

@@ -4,9 +4,9 @@ from typing import Annotated, Literal
 
 from pydantic import AfterValidator, Field, model_validator
 
-from json_calendar.models.base import JSCalendarObject
+from json_calendar._types import Id, Uri, open_enum
+from json_calendar.models._base import JSCalendarObject
 from json_calendar.models.link import Link
-from json_calendar.types import Id, Uri, open_enum
 
 
 def _check_geo_uri(value: str) -> str:

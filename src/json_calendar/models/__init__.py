@@ -8,6 +8,7 @@ and the validation rules the spec attaches to them.
 Spec: https://www.ietf.org/archive/id/draft-ietf-calext-jscalendarbis-18.html
 """
 
+from json_calendar.models._base import JSCalendarObject
 from json_calendar.models.alert import (
     AbsoluteTrigger,
     Alert,
@@ -15,7 +16,6 @@ from json_calendar.models.alert import (
     Trigger,
     UnknownTrigger,
 )
-from json_calendar.models.base import JSCalendarObject
 from json_calendar.models.calendar_object import CalendarObject
 from json_calendar.models.event import Event
 from json_calendar.models.group import Group, GroupEntry, UnknownCalendarObject

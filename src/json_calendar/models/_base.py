@@ -7,7 +7,7 @@ from typing import Annotated
 
 from pydantic import AfterValidator, BaseModel, ConfigDict, Field, model_validator
 
-from json_calendar.types import is_valid_property_name
+from json_calendar._types import is_valid_property_name
 
 
 class JSCalendarObject(BaseModel):

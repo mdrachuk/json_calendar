@@ -4,8 +4,8 @@ from typing import Annotated, Literal
 
 from pydantic import Field
 
-from json_calendar.models.base import JSCalendarObject
-from json_calendar.types import open_enum
+from json_calendar._types import open_enum
+from json_calendar.models._base import JSCalendarObject
 
 # "snooze" is IANA-registered for relations between Alert objects (Section
 # 3.5.1); it is accepted everywhere since Relation carries no context here.

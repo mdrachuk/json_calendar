@@ -4,9 +4,9 @@ from typing import Annotated, Any, Literal
 
 from pydantic import BeforeValidator, Field, model_validator
 
-from json_calendar.models.base import JSCalendarObject
+from json_calendar._types import SignedDuration, UTCDateTime, open_enum
+from json_calendar.models._base import JSCalendarObject
 from json_calendar.models.relation import Relation
-from json_calendar.types import SignedDuration, UTCDateTime, open_enum
 
 AlertAction = Annotated[str, open_enum("display", "email")]
 

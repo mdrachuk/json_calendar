@@ -4,8 +4,8 @@ from typing import Annotated, Literal
 
 from pydantic import Field, model_validator
 
+from json_calendar._types import Duration, LocalDateTime, TimeZoneId, open_enum
 from json_calendar.models.calendar_object import CalendarObject
-from json_calendar.types import Duration, LocalDateTime, TimeZoneId, open_enum
 
 EventStatus = Annotated[str, open_enum("confirmed", "cancelled", "tentative")]
 

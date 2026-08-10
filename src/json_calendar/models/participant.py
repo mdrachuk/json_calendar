@@ -4,9 +4,9 @@ from typing import Annotated, Literal
 
 from pydantic import Field, model_validator
 
-from json_calendar.models.base import JSCalendarObject, TextContentType
+from json_calendar._types import Email, Id, Uri, open_enum
+from json_calendar.models._base import JSCalendarObject, TextContentType
 from json_calendar.models.link import Link
-from json_calendar.types import Email, Id, Uri, open_enum
 
 ParticipantKind = Annotated[str, open_enum("individual", "group", "location", "resource")]
 RoleValue = Annotated[str, open_enum("owner", "optional", "informational", "chair", "required")]

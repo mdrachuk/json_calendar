@@ -4,8 +4,8 @@ from typing import Annotated, Literal
 
 from pydantic import Field, model_validator
 
-from json_calendar.models.base import JSCalendarObject
-from json_calendar.types import UnsignedInt, Uri, open_enum
+from json_calendar._types import UnsignedInt, Uri, open_enum
+from json_calendar.models._base import JSCalendarObject
 
 DisplayValue = Annotated[str, open_enum("badge", "graphic", "fullsize", "thumbnail")]
 

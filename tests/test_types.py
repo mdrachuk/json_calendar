@@ -5,7 +5,7 @@ from datetime import UTC, datetime
 import pytest
 from pydantic import TypeAdapter, ValidationError
 
-from json_calendar.types import (
+from json_calendar._types import (
     Duration,
     Id,
     Int,

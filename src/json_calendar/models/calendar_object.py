@@ -4,19 +4,7 @@ from typing import Annotated, Literal
 
 from pydantic import Field, model_validator
 
-from json_calendar.models.alert import Alert
-from json_calendar.models.base import (
-    Color,
-    JSCalendarObject,
-    JSCalendarVersion,
-    TextContentType,
-)
-from json_calendar.models.link import Link
-from json_calendar.models.location import Location, VirtualLocation
-from json_calendar.models.participant import Participant
-from json_calendar.models.recurrence_rule import RecurrenceRule
-from json_calendar.models.relation import Relation
-from json_calendar.types import (
+from json_calendar._types import (
     Email,
     Id,
     LanguageTag,
@@ -28,6 +16,18 @@ from json_calendar.types import (
     UTCDateTime,
     open_enum,
 )
+from json_calendar.models._base import (
+    Color,
+    JSCalendarObject,
+    JSCalendarVersion,
+    TextContentType,
+)
+from json_calendar.models.alert import Alert
+from json_calendar.models.link import Link
+from json_calendar.models.location import Location, VirtualLocation
+from json_calendar.models.participant import Participant
+from json_calendar.models.recurrence_rule import RecurrenceRule
+from json_calendar.models.relation import Relation
 
 FreeBusyStatus = Annotated[str, open_enum("free", "busy")]
 Privacy = Annotated[str, open_enum("public", "private", "secret")]
