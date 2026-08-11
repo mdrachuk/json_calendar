@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Annotated, Any, Literal
 
 from pydantic import Field, ValidatorFunctionWrapHandler, WrapValidator
+from pydantic.json_schema import SkipJsonSchema
 
 from json_calendar._types import Id, LanguageTag, Uri, UTCDateTime
 from json_calendar.models._base import (
@@ -48,13 +49,13 @@ class UnknownCalendarObject(JSCalendarObject):
 class _EventEntry(Event):
     """An Event in the "entries" of a Group; must not set "version" (Section 3.1.2)."""
 
-    version: None = None
+    version: SkipJsonSchema[None] = Field(default=None, exclude=True)
 
 
 class _TaskEntry(Task):
     """A Task in the "entries" of a Group; must not set "version" (Section 3.1.2)."""
 
-    version: None = None
+    version: SkipJsonSchema[None] = Field(default=None, exclude=True)
 
 
 def _dispatch_entry(value: Any, handler: ValidatorFunctionWrapHandler) -> Any:

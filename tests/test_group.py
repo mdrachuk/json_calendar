@@ -66,6 +66,13 @@ class TestGroup:
         with pytest.raises(ValidationError):
             Group.model_validate({**SIMPLE, "entries": [entry]})
 
+    def test_entries_hide_the_version_field(self):
+        group = Group.model_validate(SIMPLE)
+        assert all("version" not in entry for entry in group.model_dump(mode="json")["entries"])
+        schema = Group.model_json_schema()
+        for name in ("_EventEntry", "_TaskEntry"):
+            assert "version" not in schema["$defs"][name]["properties"]
+
     def test_entry_with_recurrence_overrides_is_valid_without_version(self):
         entry = {
             **EVENT_ENTRY,
