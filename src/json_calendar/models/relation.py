@@ -18,5 +18,9 @@ RelationValue = Annotated[
 class Relation(JSCalendarObject):
     """How a linked object is related to the linking object (Section 1.5.10)."""
 
-    type: Literal["Relation"] = Field(default="Relation", alias="@type")
-    relation: dict[RelationValue, Literal[True]] = Field(default_factory=dict)
+    type: Annotated[Literal["Relation"], cites("Section 1.5.10")] = Field(
+        default="Relation", alias="@type"
+    )
+    relation: dict[RelationValue, Annotated[Literal[True], cites("Section 1.5.10")]] = Field(
+        default_factory=dict
+    )

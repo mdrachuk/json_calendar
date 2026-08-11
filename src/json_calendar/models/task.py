@@ -18,7 +18,7 @@ TaskProgress = Annotated[
 class Task(CalendarObject):
     """An action item, assignment, to-do, or work item (Sections 2.2 and 4.2)."""
 
-    type: Literal["Task"] = Field(alias="@type")
+    type: Annotated[Literal["Task"], cites("Section 2.2")] = Field(alias="@type")
     due: LocalDateTime | None = None
     start: LocalDateTime | None = None
     estimatedDuration: Duration | None = None

@@ -58,8 +58,9 @@ def _ignored_in_override(tokens: list[str]) -> bool:
 
 FreeBusyStatus = Annotated[str, open_enum("free", "busy"), cites("Section 3.4.2")]
 Privacy = Annotated[str, open_enum("public", "private", "secret"), cites("Section 3.4.3")]
-ItipMethod = Literal[
-    "publish", "request", "reply", "add", "cancel", "refresh", "counter", "declinecounter"
+ItipMethod = Annotated[
+    Literal["publish", "request", "reply", "add", "cancel", "refresh", "counter", "declinecounter"],
+    cites("Section 3.1.8"),
 ]
 
 
@@ -71,22 +72,22 @@ class CalendarObject(JSCalendarObject):
     # this field because entries must not set it (Section 3.1.2).
     version: JSCalendarVersion
     relatedTo: dict[str, Relation] | None = None
-    prodId: str | None = None
+    prodId: Annotated[str, cites("Section 3.1.4")] | None = None
     created: UTCDateTime | None = None
     updated: UTCDateTime
     sequence: UnsignedInt = 0
     method: ItipMethod | None = None
-    title: str = ""
-    description: str = ""
+    title: Annotated[str, cites("Section 3.2.1")] = ""
+    description: Annotated[str, cites("Section 3.2.2")] = ""
     descriptionContentType: TextContentType = "text/plain"
-    showWithoutTime: bool = False
+    showWithoutTime: Annotated[bool, Field(strict=True), cites("Section 3.2.4")] = False
     locations: dict[Id, Location] | None = None
-    mainLocationId: str | None = None
+    mainLocationId: Annotated[str, cites("Section 3.2.6")] | None = None
     virtualLocations: dict[Id, VirtualLocation] | None = None
     links: dict[Id, Link] | None = None
     locale: LanguageTag | None = None
-    keywords: dict[str, Literal[True]] | None = None
-    categories: dict[Uri, Literal[True]] | None = None
+    keywords: dict[str, Annotated[Literal[True], cites("Section 3.2.10")]] | None = None
+    categories: dict[Uri, Annotated[Literal[True], cites("Section 3.2.11")]] | None = None
     color: Color | None = None
     recurrenceId: LocalDateTime | None = None
     recurrenceIdTimeZone: TimeZoneId | None = None

@@ -23,17 +23,17 @@ from json_calendar.models.task import Task
 class Group(JSCalendarObject):
     """A collection of Event and/or Task objects (Sections 2.3 and 4.3)."""
 
-    type: Literal["Group"] = Field(alias="@type")
+    type: Annotated[Literal["Group"], cites("Section 2.3")] = Field(alias="@type")
     uid: Annotated[str, Field(min_length=1), cites("Section 3.1.1")]
     version: JSCalendarVersion
-    prodId: str | None = None
+    prodId: Annotated[str, cites("Section 3.1.4")] | None = None
     created: UTCDateTime | None = None
     updated: UTCDateTime
-    title: str = ""
-    description: str = ""
+    title: Annotated[str, cites("Section 3.2.1")] = ""
+    description: Annotated[str, cites("Section 3.2.2")] = ""
     descriptionContentType: TextContentType = "text/plain"
-    keywords: dict[str, Literal[True]] | None = None
-    categories: dict[Uri, Literal[True]] | None = None
+    keywords: dict[str, Annotated[Literal[True], cites("Section 3.2.10")]] | None = None
+    categories: dict[Uri, Annotated[Literal[True], cites("Section 3.2.11")]] | None = None
     color: Color | None = None
     links: dict[Id, Link] | None = None
     locale: LanguageTag | None = None

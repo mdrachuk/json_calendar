@@ -25,7 +25,7 @@ def _check_text_content_type(value: str) -> str:
 
 # This implementation supports only the JSCalendar version specified in
 # jscalendarbis; version "1.0" objects follow the RFC 8984 schema instead.
-JSCalendarVersion = Literal["2.0"]
+JSCalendarVersion = Annotated[Literal["2.0"], cites("Section 3.1.2")]
 TextContentType = Annotated[str, AfterValidator(_check_text_content_type), cites("Section 3.2.3")]
 Color = Annotated[str, AfterValidator(check_color), cites("Section 3.2.12")]
 

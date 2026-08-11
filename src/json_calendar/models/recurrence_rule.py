@@ -10,7 +10,7 @@ from json_calendar._spec import cites
 from json_calendar._types import MAX_INT, Int, LocalDateTime, UnsignedInt, open_enum
 from json_calendar.models._base import JSCalendarObject
 
-WeekDay = Literal["mo", "tu", "we", "th", "fr", "sa", "su"]
+WeekDay = Annotated[Literal["mo", "tu", "we", "th", "fr", "sa", "su"], cites("Section 3.3.3")]
 
 # The calendar systems registered in the Unicode CLDR (common/bcp47/calendar.xml),
 # including the aliased and deprecated names, which RFC 7529 also permits;
@@ -43,8 +43,13 @@ _CLDR_CALENDAR_SYSTEMS = (
 class RecurrenceRule(JSCalendarObject):
     """A repeating pattern for recurring calendar objects (Section 3.3.3)."""
 
-    type: Literal["RecurrenceRule"] = Field(default="RecurrenceRule", alias="@type")
-    frequency: Literal["yearly", "monthly", "weekly", "daily", "hourly", "minutely", "secondly"]
+    type: Annotated[Literal["RecurrenceRule"], cites("Section 3.3.3")] = Field(
+        default="RecurrenceRule", alias="@type"
+    )
+    frequency: Annotated[
+        Literal["yearly", "monthly", "weekly", "daily", "hourly", "minutely", "secondly"],
+        cites("Section 3.3.3"),
+    ]
     interval: Annotated[int, Field(strict=True, ge=1, le=MAX_INT), cites("Section 3.3.3")] = 1
     rscale: Annotated[
         str,
@@ -52,7 +57,7 @@ class RecurrenceRule(JSCalendarObject):
         open_enum(*_CLDR_CALENDAR_SYSTEMS),
         cites("Section 3.3.3"),
     ] = "gregorian"
-    skip: Literal["omit", "backward", "forward"] = "omit"
+    skip: Annotated[Literal["omit", "backward", "forward"], cites("Section 3.3.3")] = "omit"
     firstDayOfWeek: WeekDay = "mo"
     byDay: list[NDay] | None = Field(default=None, min_length=1)
     byMonthDay: (
@@ -119,7 +124,7 @@ class RecurrenceRule(JSCalendarObject):
 class NDay(JSCalendarObject):
     """A day of the week on which to repeat (Section 3.3.3)."""
 
-    type: Literal["NDay"] = Field(default="NDay", alias="@type")
+    type: Annotated[Literal["NDay"], cites("Section 3.3.3")] = Field(default="NDay", alias="@type")
     day: WeekDay
     nthOfPeriod: Annotated[Int, AfterValidator(_check_nonzero), cites("Section 3.3.3")] | None = (
         None

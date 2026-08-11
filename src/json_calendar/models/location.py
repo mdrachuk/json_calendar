@@ -27,9 +27,13 @@ FeatureValue = Annotated[
 class Location(JSCalendarObject):
     """A physical location associated with a calendar object (Section 3.2.5)."""
 
-    type: Literal["Location"] = Field(default="Location", alias="@type")
-    name: str | None = None
-    locationTypes: dict[str, Literal[True]] | None = Field(default=None, min_length=1)
+    type: Annotated[Literal["Location"], cites("Section 3.2.5")] = Field(
+        default="Location", alias="@type"
+    )
+    name: Annotated[str, cites("Section 3.2.5")] | None = None
+    locationTypes: dict[str, Annotated[Literal[True], cites("Section 3.2.5")]] | None = Field(
+        default=None, min_length=1
+    )
     coordinates: GeoUri | None = None
     links: dict[Id, Link] | None = Field(default=None, min_length=1)
 
@@ -46,7 +50,11 @@ class Location(JSCalendarObject):
 class VirtualLocation(JSCalendarObject):
     """A virtual location, such as a video conference (Section 3.2.7)."""
 
-    type: Literal["VirtualLocation"] = Field(default="VirtualLocation", alias="@type")
-    name: str = ""
+    type: Annotated[Literal["VirtualLocation"], cites("Section 3.2.7")] = Field(
+        default="VirtualLocation", alias="@type"
+    )
+    name: Annotated[str, cites("Section 3.2.7")] = ""
     uri: Uri
-    features: dict[FeatureValue, Literal[True]] | None = Field(default=None, min_length=1)
+    features: dict[FeatureValue, Annotated[Literal[True], cites("Section 3.2.7")]] | None = Field(
+        default=None, min_length=1
+    )

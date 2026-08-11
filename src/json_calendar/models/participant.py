@@ -30,22 +30,32 @@ ParticipantProgress = Annotated[
 class Participant(JSCalendarObject):
     """A participant of a calendar object (Section 3.4.6)."""
 
-    type: Literal["Participant"] = Field(default="Participant", alias="@type")
-    name: str | None = None
+    type: Annotated[Literal["Participant"], cites("Section 3.4.6")] = Field(
+        default="Participant", alias="@type"
+    )
+    name: Annotated[str, cites("Section 3.4.6")] | None = None
     email: Email | None = None
-    description: str | None = None
+    description: Annotated[str, cites("Section 3.4.6")] | None = None
     descriptionContentType: TextContentType | None = None
     calendarAddress: Uri | None = None
     kind: ParticipantKind | None = None
-    roles: dict[RoleValue, Literal[True]] | None = Field(default=None, min_length=1)
+    roles: dict[RoleValue, Annotated[Literal[True], cites("Section 3.4.6")]] | None = Field(
+        default=None, min_length=1
+    )
     participationStatus: ParticipationStatus = "needs-action"
-    expectReply: bool = False
+    expectReply: Annotated[bool, Field(strict=True), cites("Section 3.4.6")] = False
     sentBy: Email | None = None
-    delegatedTo: dict[Uri, Literal[True]] | None = Field(default=None, min_length=1)
-    delegatedFrom: dict[Uri, Literal[True]] | None = Field(default=None, min_length=1)
+    delegatedTo: dict[Uri, Annotated[Literal[True], cites("Section 3.4.6")]] | None = Field(
+        default=None, min_length=1
+    )
+    delegatedFrom: dict[Uri, Annotated[Literal[True], cites("Section 3.4.6")]] | None = Field(
+        default=None, min_length=1
+    )
     # The spec gives the type signature Id[Boolean] but requires URI keys; we
     # keep the keys unconstrained to accept both readings of the draft.
-    memberOf: dict[str, Literal[True]] | None = Field(default=None, min_length=1)
+    memberOf: dict[str, Annotated[Literal[True], cites("Section 3.4.6")]] | None = Field(
+        default=None, min_length=1
+    )
     links: dict[Id, Link] | None = Field(default=None, min_length=1)
     progress: ParticipantProgress | None = None
     percentComplete: Annotated[int, Field(strict=True, ge=0, le=100), cites("Section 4.2.4")] | (

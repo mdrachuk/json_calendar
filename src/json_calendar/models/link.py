@@ -16,13 +16,15 @@ DisplayValue = Annotated[
 class Link(JSCalendarObject):
     """An external resource associated with the linking object (Section 1.5.11)."""
 
-    type: Literal["Link"] = Field(default="Link", alias="@type")
+    type: Annotated[Literal["Link"], cites("Section 1.5.11")] = Field(default="Link", alias="@type")
     href: Uri
-    contentType: str | None = None
+    contentType: Annotated[str, cites("Section 1.5.11")] | None = None
     size: UnsignedInt | None = None
-    rel: str = "enclosure"
-    display: dict[DisplayValue, Literal[True]] | None = Field(default=None, min_length=1)
-    title: str | None = None
+    rel: Annotated[str, cites("Section 1.5.11")] = "enclosure"
+    display: dict[DisplayValue, Annotated[Literal[True], cites("Section 1.5.11")]] | None = Field(
+        default=None, min_length=1
+    )
+    title: Annotated[str, cites("Section 1.5.11")] | None = None
 
     @model_validator(mode="after")
     def _display_requires_icon_rel(self) -> "Link":

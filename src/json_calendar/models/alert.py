@@ -17,7 +17,9 @@ AlertAction = Annotated[str, open_enum("display", "email"), cites("Section 3.5.1
 class Alert(JSCalendarObject):
     """An alert/reminder for a calendar object (Section 3.5.1)."""
 
-    type: Literal["Alert"] = Field(default="Alert", alias="@type")
+    type: Annotated[Literal["Alert"], cites("Section 3.5.1")] = Field(
+        default="Alert", alias="@type"
+    )
     trigger: Trigger
     acknowledged: UTCDateTime | None = None
     relatedTo: dict[str, Relation] | None = None
@@ -27,15 +29,19 @@ class Alert(JSCalendarObject):
 class OffsetTrigger(JSCalendarObject):
     """Triggers an alert relative to the object's time (Section 3.5.1)."""
 
-    type: Literal["OffsetTrigger"] = Field(default="OffsetTrigger", alias="@type")
+    type: Annotated[Literal["OffsetTrigger"], cites("Section 3.5.1")] = Field(
+        default="OffsetTrigger", alias="@type"
+    )
     offset: SignedDuration
-    relativeTo: Literal["start", "end"] = "start"
+    relativeTo: Annotated[Literal["start", "end"], cites("Section 3.5.1")] = "start"
 
 
 class AbsoluteTrigger(JSCalendarObject):
     """Triggers an alert at a specific UTC date-time (Section 3.5.1)."""
 
-    type: Literal["AbsoluteTrigger"] = Field(default="AbsoluteTrigger", alias="@type")
+    type: Annotated[Literal["AbsoluteTrigger"], cites("Section 3.5.1")] = Field(
+        default="AbsoluteTrigger", alias="@type"
+    )
     when: UTCDateTime
 
 
@@ -47,7 +53,7 @@ class UnknownTrigger(JSCalendarObject):
     @model_validator(mode="after")
     def _type_is_unknown(self) -> UnknownTrigger:
         if self.type in ("OffsetTrigger", "AbsoluteTrigger"):
-            raise ValueError(f"{self.type!r} is a known trigger type")
+            raise ValueError(f"{self.type!r} is a known trigger type (Section 3.5.1)")
         return self
 
 
