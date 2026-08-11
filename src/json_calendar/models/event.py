@@ -17,7 +17,7 @@ class Event(CalendarObject):
     """A scheduled amount of time on a calendar (Sections 2.1 and 4.1)."""
 
     type: Annotated[Literal["Event"], cites("Section 2.1")] = Field(alias="@type")
-    start: LocalDateTime
+    start: Annotated[LocalDateTime, cites("Section 4.1.1")]
     duration: Duration = "PT0S"
     endTimeZone: TimeZoneId | None = None
     status: EventStatus = "confirmed"

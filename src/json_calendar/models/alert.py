@@ -20,7 +20,7 @@ class Alert(JSCalendarObject):
     type: Annotated[Literal["Alert"], cites("Section 3.5.1")] = Field(
         default="Alert", alias="@type"
     )
-    trigger: Trigger
+    trigger: Annotated[Trigger, cites("Section 3.5.1")]
     acknowledged: UTCDateTime | None = None
     relatedTo: dict[str, Relation] | None = None
     action: AlertAction = "display"
@@ -32,7 +32,7 @@ class OffsetTrigger(JSCalendarObject):
     type: Annotated[Literal["OffsetTrigger"], cites("Section 3.5.1")] = Field(
         default="OffsetTrigger", alias="@type"
     )
-    offset: SignedDuration
+    offset: Annotated[SignedDuration, cites("Section 3.5.1")]
     relativeTo: Annotated[Literal["start", "end"], cites("Section 3.5.1")] = "start"
 
 
@@ -42,7 +42,7 @@ class AbsoluteTrigger(JSCalendarObject):
     type: Annotated[Literal["AbsoluteTrigger"], cites("Section 3.5.1")] = Field(
         default="AbsoluteTrigger", alias="@type"
     )
-    when: UTCDateTime
+    when: Annotated[UTCDateTime, cites("Section 3.5.1")]
 
 
 class UnknownTrigger(JSCalendarObject):

@@ -4,8 +4,9 @@ import pytest
 from pydantic import TypeAdapter, ValidationError
 
 from json_calendar._types import Duration, Id, Int, LanguageTag, PatchObject, TimeZoneId, Uri
-from json_calendar.models import Event, Link, Participant, RecurrenceRule
+from json_calendar.models import Alert, Event, Group, Link, Participant, RecurrenceRule
 from json_calendar.models._base import Color
+from json_calendar.models.location import VirtualLocation
 
 
 @pytest.mark.parametrize(
@@ -96,6 +97,75 @@ def test_property_name_errors_cite_the_spec():
     with pytest.raises(ValidationError) as info:
         Link.model_validate({"href": "https://example.com", "BAD NAME": 1})
     assert "(Sections 1.7.2 and 1.8.1)" in str(info.value)
+
+
+@pytest.mark.parametrize(
+    ("citation", "missing"),
+    [
+        ("(Section 2.1)", "@type"),
+        ("(Section 3.1.1)", "uid"),
+        ("(Section 3.1.2)", "version"),
+        ("(Section 3.1.6)", "updated"),
+        ("(Section 4.1.1)", "start"),
+    ],
+)
+def test_missing_required_property_errors_cite_the_spec(citation, missing):
+    event = {
+        "@type": "Event",
+        "uid": "e1",
+        "version": "2.0",
+        "updated": "2020-01-01T00:00:00Z",
+        "start": "2020-06-01T09:00:00",
+    }
+    del event[missing]
+    with pytest.raises(ValidationError) as info:
+        Event.model_validate(event)
+    assert f"Field required {citation}" in str(info.value)
+
+
+@pytest.mark.parametrize(
+    ("citation", "model", "data"),
+    [
+        ("(Section 3.5.1)", Alert, {}),
+        ("(Section 1.5.11)", Link, {}),
+        ("(Section 3.2.7)", VirtualLocation, {}),
+        ("(Section 4.3.1)", Group, {"@type": "Group", "uid": "g", "version": "2.0"}),
+    ],
+)
+def test_missing_required_component_property_errors_cite_the_spec(citation, model, data):
+    with pytest.raises(ValidationError) as info:
+        model.model_validate(data)
+    assert f"Field required {citation}" in str(info.value)
+
+
+@pytest.mark.parametrize(
+    ("citation", "props"),
+    [
+        ("(Section 3.3.3)", {"byDay": []}),
+        ("(Section 3.3.3)", {"byMonthDay": []}),
+        ("(Section 3.3.3; RFC 7529)", {"byMonth": []}),
+        ("(Section 3.3.3)", {"bySetPosition": []}),
+    ],
+)
+def test_empty_container_errors_cite_the_spec(citation, props):
+    with pytest.raises(ValidationError) as info:
+        RecurrenceRule.model_validate({"frequency": "daily", **props})
+    assert citation in str(info.value)
+
+
+def test_empty_participant_and_link_containers_cite_the_spec():
+    with pytest.raises(ValidationError) as info:
+        Participant.model_validate({"calendarAddress": "mailto:a@example.com", "roles": {}})
+    assert "(Section 3.4.6)" in str(info.value)
+    with pytest.raises(ValidationError) as info:
+        Link.model_validate({"href": "https://example.com", "rel": "icon", "display": {}})
+    assert "(Section 1.5.11)" in str(info.value)
+
+
+def test_cited_errors_keep_their_error_location():
+    with pytest.raises(ValidationError) as info:
+        RecurrenceRule.model_validate({"frequency": "daily", "byMonth": ["1", "123"]})
+    assert info.value.errors()[0]["loc"] == ("byMonth", 1)
 
 
 def test_recurrence_override_errors_cite_the_spec():

@@ -3,12 +3,19 @@
 Spec: https://www.ietf.org/archive/id/draft-ietf-calext-jscalendarbis-18.html
 """
 
-from typing import Annotated, Literal
+from typing import Annotated, Any, Literal
 
-from pydantic import AfterValidator, BaseModel, ConfigDict, model_validator
+from pydantic import (
+    AfterValidator,
+    BaseModel,
+    ConfigDict,
+    ValidationError,
+    ValidatorFunctionWrapHandler,
+    model_validator,
+)
 
 from json_calendar._css3_colors import check_color
-from json_calendar._spec import cites
+from json_calendar._spec import cite_errors, cites, property_citations
 from json_calendar._types import is_valid_property_name
 
 
@@ -45,6 +52,19 @@ class JSCalendarObject(BaseModel):
         extra="allow",
     )
 
+    @model_validator(mode="wrap")
+    @classmethod
+    def _cite_property_errors(cls, value: Any, handler: ValidatorFunctionWrapHandler) -> Any:
+        """Cite the spec on errors no field validator sees, e.g. missing fields."""
+        try:
+            return handler(value)
+        except ValidationError as error:
+            citations = _property_citations(cls)
+            raise cite_errors(
+                error,
+                lambda detail: citations.get(detail["loc"][0]) if detail["loc"] else None,
+            ) from None
+
     @model_validator(mode="after")
     def _validate_extra_property_names(self) -> "JSCalendarObject":
         extra = self.__pydantic_extra__ or {}
@@ -65,3 +85,13 @@ class JSCalendarObject(BaseModel):
             if not is_valid_property_name(key):
                 raise ValueError(f"{key!r} is not a valid property name (Sections 1.7.2 and 1.8.1)")
         return self
+
+
+_PROPERTY_CITATIONS_CACHE: dict[type[JSCalendarObject], dict[str, str]] = {}
+
+
+def _property_citations(cls: type[JSCalendarObject]) -> dict[str, str]:
+    citations = _PROPERTY_CITATIONS_CACHE.get(cls)
+    if citations is None:
+        citations = _PROPERTY_CITATIONS_CACHE[cls] = property_citations(cls.model_fields)
+    return citations

@@ -74,7 +74,7 @@ class CalendarObject(JSCalendarObject):
     relatedTo: dict[str, Relation] | None = None
     prodId: Annotated[str, cites("Section 3.1.4")] | None = None
     created: UTCDateTime | None = None
-    updated: UTCDateTime
+    updated: Annotated[UTCDateTime, cites("Section 3.1.6")]
     sequence: UnsignedInt = 0
     method: ItipMethod | None = None
     title: Annotated[str, cites("Section 3.2.1")] = ""

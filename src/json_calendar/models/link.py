@@ -17,13 +17,14 @@ class Link(JSCalendarObject):
     """An external resource associated with the linking object (Section 1.5.11)."""
 
     type: Annotated[Literal["Link"], cites("Section 1.5.11")] = Field(default="Link", alias="@type")
-    href: Uri
+    href: Annotated[Uri, cites("Section 1.5.11")]
     contentType: Annotated[str, cites("Section 1.5.11")] | None = None
     size: UnsignedInt | None = None
     rel: Annotated[str, cites("Section 1.5.11")] = "enclosure"
-    display: dict[DisplayValue, Annotated[Literal[True], cites("Section 1.5.11")]] | None = Field(
-        default=None, min_length=1
-    )
+    display: Annotated[
+        dict[DisplayValue, Annotated[Literal[True], cites("Section 1.5.11")]] | None,
+        cites("Section 1.5.11"),
+    ] = Field(default=None, min_length=1)
     title: Annotated[str, cites("Section 1.5.11")] | None = None
 
     @model_validator(mode="after")

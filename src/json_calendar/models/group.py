@@ -28,7 +28,7 @@ class Group(JSCalendarObject):
     version: JSCalendarVersion
     prodId: Annotated[str, cites("Section 3.1.4")] | None = None
     created: UTCDateTime | None = None
-    updated: UTCDateTime
+    updated: Annotated[UTCDateTime, cites("Section 3.1.6")]
     title: Annotated[str, cites("Section 3.2.1")] = ""
     description: Annotated[str, cites("Section 3.2.2")] = ""
     descriptionContentType: TextContentType = "text/plain"
@@ -37,7 +37,7 @@ class Group(JSCalendarObject):
     color: Color | None = None
     links: dict[Id, Link] | None = None
     locale: LanguageTag | None = None
-    entries: list[GroupEntry]
+    entries: Annotated[list[GroupEntry], cites("Section 4.3.1")]
     source: Uri | None = None
 
 

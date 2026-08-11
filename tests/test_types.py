@@ -7,14 +7,17 @@ from pydantic import TypeAdapter, ValidationError
 
 from json_calendar._types import (
     Duration,
+    Email,
     Id,
     Int,
+    LanguageTag,
     LocalDateTime,
     SignedDuration,
     TimeZoneId,
     UnsignedInt,
     Uri,
     UTCDateTime,
+    is_vendor_extension,
 )
 from json_calendar.models._base import Color
 
@@ -27,6 +30,8 @@ durations = TypeAdapter(Duration)
 signed_durations = TypeAdapter(SignedDuration)
 tzids = TypeAdapter(TimeZoneId)
 uris = TypeAdapter(Uri)
+emails = TypeAdapter(Email)
+language_tags = TypeAdapter(LanguageTag)
 colors = TypeAdapter(Color)
 
 
@@ -136,7 +141,21 @@ class TestDuration:
 
     @pytest.mark.parametrize(
         "value",
-        ["P", "PT", "P1H", "1D", "PT1H2S", "P1DT", "-PT1H", "+PT1H", "P1D2W", "pt1h", "PT1.5H"],
+        [
+            "P",
+            "PT",
+            "P1H",
+            "1D",
+            "PT1H2S",
+            "P1DT",
+            "-PT1H",
+            "+PT1H",
+            "P1D2W",
+            "pt1h",
+            "PT1.5H",
+            "P\uff11D",
+            "PT1\u06605S",
+        ],
     )
     def test_invalid(self, value):
         with pytest.raises(ValidationError):
@@ -163,6 +182,8 @@ class TestUri:
             "http://example.com/a%2Fb",
             "http://user@example.com:8080/path",
             "http://[2001:db8::1]/",
+            "http://[v1.a]/",
+            "http://[V1F.future]/",
             "file:///etc/hosts",
             "foo:",
         ],
@@ -182,12 +203,130 @@ class TestUri:
             "https://example.com/#one#two",
             "http://[not-ipv6]/",
             "http://example.com:abc/",
+            "https://example.com\n",
+            "http://example.com:\uff18\uff10/",
+            "http://\uff11.0.0.1/",
             "",
         ],
     )
     def test_invalid(self, value):
         with pytest.raises(ValidationError):
             uris.validate_python(value)
+
+
+class TestEmail:
+    @pytest.mark.parametrize(
+        "value",
+        [
+            "tom@foobar.example.com",
+            "a+tag@example.com",
+            "o'brien@example.com",
+            '"quoted string"@example.com',
+            '"with\\"escape"@example.com',
+            "tom@[192.0.2.1]",
+        ],
+    )
+    def test_valid(self, value):
+        assert emails.validate_python(value) == value
+
+    @pytest.mark.parametrize(
+        "value",
+        [
+            "a..b@example.com",
+            ".a@example.com",
+            "a.@example.com",
+            "a@b..c",
+            "a@.b",
+            "a@b.",
+            "a@",
+            "@example.com",
+            "a b@example.com",
+            "a@exa mple.com",
+            '"unclosed@example.com',
+            "a@b@c",
+            "café@example.com",
+            "",
+        ],
+    )
+    def test_invalid(self, value):
+        with pytest.raises(ValidationError):
+            emails.validate_python(value)
+
+
+class TestLanguageTag:
+    @pytest.mark.parametrize(
+        "value",
+        [
+            "en",
+            "en-US",
+            "zh-Hant-TW",
+            "de-DE-1901",
+            "es-419",
+            "zh-min-nan",
+            "i-klingon",
+            "x-private",
+            "en-a-bbb-x-a-ccc",
+            "en-US-x-twain",
+        ],
+    )
+    def test_valid(self, value):
+        assert language_tags.validate_python(value) == value
+
+    @pytest.mark.parametrize(
+        "value",
+        [
+            "x",
+            "i",
+            "en-",
+            "-en",
+            "abcdefghi",
+            "abcd-efg",
+            "a-b-c-d",
+            "en-US-",
+            "de-419-DE",
+            "en--US",
+            "",
+        ],
+    )
+    def test_invalid(self, value):
+        with pytest.raises(ValidationError):
+            language_tags.validate_python(value)
+
+
+class TestVendorExtension:
+    @pytest.mark.parametrize(
+        "value",
+        [
+            "example.com:lunar",
+            "a:b",
+            "foo:name with spaces!",
+            "sub.example.com:x",
+            "3m.com:tape",
+            "bücher.example:straße",
+        ],
+    )
+    def test_valid(self, value):
+        assert is_vendor_extension(value)
+
+    @pytest.mark.parametrize(
+        "value",
+        [
+            "foo-:bar",
+            "-foo:bar",
+            "foo_bar:baz",
+            "foo.:bar",
+            ".foo:bar",
+            "foo..bar:baz",
+            "foo:",
+            "foo:with/solidus",
+            "foo:with~tilde",
+            'foo:with"quote',
+            "foo:with\x01control",
+            "nocolon",
+        ],
+    )
+    def test_invalid(self, value):
+        assert not is_vendor_extension(value)
 
 
 class TestColor:

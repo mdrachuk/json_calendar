@@ -59,38 +59,47 @@ class RecurrenceRule(JSCalendarObject):
     ] = "gregorian"
     skip: Annotated[Literal["omit", "backward", "forward"], cites("Section 3.3.3")] = "omit"
     firstDayOfWeek: WeekDay = "mo"
-    byDay: list[NDay] | None = Field(default=None, min_length=1)
-    byMonthDay: (
-        list[Annotated[Int, AfterValidator(_check_nonzero), cites("Section 3.3.3")]] | None
-    ) = Field(default=None, min_length=1)
+    byDay: Annotated[list[NDay] | None, cites("Section 3.3.3")] = Field(default=None, min_length=1)
+    byMonthDay: Annotated[
+        list[Annotated[Int, AfterValidator(_check_nonzero), cites("Section 3.3.3")]] | None,
+        cites("Section 3.3.3"),
+    ] = Field(default=None, min_length=1)
     # RFC 7529: monthnum = 1*2DIGIT ["L"]; month numbering starts from 1.
-    byMonth: (
+    byMonth: Annotated[
         list[
             Annotated[
                 str,
-                Field(pattern=r"^\d{1,2}L?$"),
+                Field(pattern=r"^[0-9]{1,2}L?$"),
                 AfterValidator(_check_month_nonzero),
                 cites("Section 3.3.3; RFC 7529"),
             ]
         ]
-        | None
-    ) = Field(default=None, min_length=1)
-    byYearDay: (
-        list[Annotated[Int, AfterValidator(_check_nonzero), cites("Section 3.3.3")]] | None
-    ) = Field(default=None, min_length=1)
-    byWeekNo: (
-        list[Annotated[Int, AfterValidator(_check_nonzero), cites("Section 3.3.3")]] | None
-    ) = Field(default=None, min_length=1)
-    byHour: list[Annotated[int, Field(strict=True, ge=0, le=23), cites("Section 3.3.3")]] | None = (
-        Field(default=None, min_length=1)
+        | None,
+        cites("Section 3.3.3; RFC 7529"),
+    ] = Field(default=None, min_length=1)
+    byYearDay: Annotated[
+        list[Annotated[Int, AfterValidator(_check_nonzero), cites("Section 3.3.3")]] | None,
+        cites("Section 3.3.3"),
+    ] = Field(default=None, min_length=1)
+    byWeekNo: Annotated[
+        list[Annotated[Int, AfterValidator(_check_nonzero), cites("Section 3.3.3")]] | None,
+        cites("Section 3.3.3"),
+    ] = Field(default=None, min_length=1)
+    byHour: Annotated[
+        list[Annotated[int, Field(strict=True, ge=0, le=23), cites("Section 3.3.3")]] | None,
+        cites("Section 3.3.3"),
+    ] = Field(default=None, min_length=1)
+    byMinute: Annotated[
+        list[Annotated[int, Field(strict=True, ge=0, le=59), cites("Section 3.3.3")]] | None,
+        cites("Section 3.3.3"),
+    ] = Field(default=None, min_length=1)
+    bySecond: Annotated[
+        list[Annotated[int, Field(strict=True, ge=0, le=60), cites("Section 3.3.3")]] | None,
+        cites("Section 3.3.3"),
+    ] = Field(default=None, min_length=1)
+    bySetPosition: Annotated[list[Int] | None, cites("Section 3.3.3")] = Field(
+        default=None, min_length=1
     )
-    byMinute: (
-        list[Annotated[int, Field(strict=True, ge=0, le=59), cites("Section 3.3.3")]] | None
-    ) = Field(default=None, min_length=1)
-    bySecond: (
-        list[Annotated[int, Field(strict=True, ge=0, le=60), cites("Section 3.3.3")]] | None
-    ) = Field(default=None, min_length=1)
-    bySetPosition: list[Int] | None = Field(default=None, min_length=1)
     count: UnsignedInt | None = None
     until: LocalDateTime | None = None
 

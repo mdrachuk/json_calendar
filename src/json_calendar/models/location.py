@@ -31,11 +31,14 @@ class Location(JSCalendarObject):
         default="Location", alias="@type"
     )
     name: Annotated[str, cites("Section 3.2.5")] | None = None
-    locationTypes: dict[str, Annotated[Literal[True], cites("Section 3.2.5")]] | None = Field(
+    locationTypes: Annotated[
+        dict[str, Annotated[Literal[True], cites("Section 3.2.5")]] | None,
+        cites("Section 3.2.5"),
+    ] = Field(default=None, min_length=1)
+    coordinates: GeoUri | None = None
+    links: Annotated[dict[Id, Link] | None, cites("Section 3.2.5")] = Field(
         default=None, min_length=1
     )
-    coordinates: GeoUri | None = None
-    links: dict[Id, Link] | None = Field(default=None, min_length=1)
 
     @model_validator(mode="after")
     def _requires_a_property(self) -> "Location":
@@ -54,7 +57,8 @@ class VirtualLocation(JSCalendarObject):
         default="VirtualLocation", alias="@type"
     )
     name: Annotated[str, cites("Section 3.2.7")] = ""
-    uri: Uri
-    features: dict[FeatureValue, Annotated[Literal[True], cites("Section 3.2.7")]] | None = Field(
-        default=None, min_length=1
-    )
+    uri: Annotated[Uri, cites("Section 3.2.7")]
+    features: Annotated[
+        dict[FeatureValue, Annotated[Literal[True], cites("Section 3.2.7")]] | None,
+        cites("Section 3.2.7"),
+    ] = Field(default=None, min_length=1)

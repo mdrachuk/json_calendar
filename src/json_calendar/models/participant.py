@@ -39,24 +39,30 @@ class Participant(JSCalendarObject):
     descriptionContentType: TextContentType | None = None
     calendarAddress: Uri | None = None
     kind: ParticipantKind | None = None
-    roles: dict[RoleValue, Annotated[Literal[True], cites("Section 3.4.6")]] | None = Field(
-        default=None, min_length=1
-    )
+    roles: Annotated[
+        dict[RoleValue, Annotated[Literal[True], cites("Section 3.4.6")]] | None,
+        cites("Section 3.4.6"),
+    ] = Field(default=None, min_length=1)
     participationStatus: ParticipationStatus = "needs-action"
     expectReply: Annotated[bool, Field(strict=True), cites("Section 3.4.6")] = False
     sentBy: Email | None = None
-    delegatedTo: dict[Uri, Annotated[Literal[True], cites("Section 3.4.6")]] | None = Field(
-        default=None, min_length=1
-    )
-    delegatedFrom: dict[Uri, Annotated[Literal[True], cites("Section 3.4.6")]] | None = Field(
-        default=None, min_length=1
-    )
+    delegatedTo: Annotated[
+        dict[Uri, Annotated[Literal[True], cites("Section 3.4.6")]] | None,
+        cites("Section 3.4.6"),
+    ] = Field(default=None, min_length=1)
+    delegatedFrom: Annotated[
+        dict[Uri, Annotated[Literal[True], cites("Section 3.4.6")]] | None,
+        cites("Section 3.4.6"),
+    ] = Field(default=None, min_length=1)
     # The spec gives the type signature Id[Boolean] but requires URI keys; we
     # keep the keys unconstrained to accept both readings of the draft.
-    memberOf: dict[str, Annotated[Literal[True], cites("Section 3.4.6")]] | None = Field(
+    memberOf: Annotated[
+        dict[str, Annotated[Literal[True], cites("Section 3.4.6")]] | None,
+        cites("Section 3.4.6"),
+    ] = Field(default=None, min_length=1)
+    links: Annotated[dict[Id, Link] | None, cites("Section 3.4.6")] = Field(
         default=None, min_length=1
     )
-    links: dict[Id, Link] | None = Field(default=None, min_length=1)
     progress: ParticipantProgress | None = None
     percentComplete: Annotated[int, Field(strict=True, ge=0, le=100), cites("Section 4.2.4")] | (
         None

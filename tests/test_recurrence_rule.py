@@ -63,7 +63,10 @@ class TestParts:
     def test_rscale_accepts_vendor_specific_values(self):
         assert rule(rscale="example.com:lunar").rscale == "example.com:lunar"
 
-    @pytest.mark.parametrize("value", ["GREGORIAN", "Chinese", "not a calendar", "klingon", ""])
+    @pytest.mark.parametrize(
+        "value",
+        ["GREGORIAN", "Chinese", "not a calendar", "klingon", "", "foo-:bar", "foo_bar:baz"],
+    )
     def test_rscale_rejects_unregistered_values(self, value):
         with pytest.raises(ValidationError):
             rule(rscale=value)
@@ -105,7 +108,7 @@ class TestParts:
         with pytest.raises(ValidationError):
             rule(byMonth=[3])
 
-    @pytest.mark.parametrize("value", ["0", "00", "123", "999L", ""])
+    @pytest.mark.parametrize("value", ["0", "00", "123", "999L", "", "\uff11\uff12", "1\uff12"])
     def test_by_month_rejects_malformed_numbers_in_any_calendar(self, value):
         with pytest.raises(ValidationError):
             rule(rscale="chinese", byMonth=[value])
