@@ -7,6 +7,8 @@ from typing import Annotated, Literal
 
 from pydantic import AfterValidator, BaseModel, ConfigDict, model_validator
 
+from json_calendar._css3_colors import check_color
+from json_calendar._spec import cites
 from json_calendar._types import is_valid_property_name
 
 
@@ -21,21 +23,11 @@ def _check_text_content_type(value: str) -> str:
     return value
 
 
-def _check_color(value: str) -> str:
-    if value.startswith("#"):
-        hex_part = value[1:]
-        if len(hex_part) != 6 or any(c not in "0123456789abcdefABCDEF" for c in hex_part):
-            raise ValueError(f"{value!r} is not an RGB value in six-digit hexadecimal notation")
-    elif not value.isalpha():
-        raise ValueError(f"{value!r} is not a CSS color name")
-    return value
-
-
 # This implementation supports only the JSCalendar version specified in
 # jscalendarbis; version "1.0" objects follow the RFC 8984 schema instead.
 JSCalendarVersion = Literal["2.0"]
-TextContentType = Annotated[str, AfterValidator(_check_text_content_type)]
-Color = Annotated[str, AfterValidator(_check_color)]
+TextContentType = Annotated[str, AfterValidator(_check_text_content_type), cites("Section 3.2.3")]
+Color = Annotated[str, AfterValidator(check_color), cites("Section 3.2.12")]
 
 
 class JSCalendarObject(BaseModel):
@@ -71,5 +63,5 @@ class JSCalendarObject(BaseModel):
                     f"property {canonical!r} (Section 1.7.1)"
                 )
             if not is_valid_property_name(key):
-                raise ValueError(f"{key!r} is not a valid property name")
+                raise ValueError(f"{key!r} is not a valid property name (Sections 1.7.2 and 1.8.1)")
         return self

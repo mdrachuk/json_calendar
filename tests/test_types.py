@@ -13,8 +13,10 @@ from json_calendar._types import (
     SignedDuration,
     TimeZoneId,
     UnsignedInt,
+    Uri,
     UTCDateTime,
 )
+from json_calendar.models._base import Color
 
 ids = TypeAdapter(Id)
 ints = TypeAdapter(Int)
@@ -24,6 +26,8 @@ local = TypeAdapter(LocalDateTime)
 durations = TypeAdapter(Duration)
 signed_durations = TypeAdapter(SignedDuration)
 tzids = TypeAdapter(TimeZoneId)
+uris = TypeAdapter(Uri)
+colors = TypeAdapter(Color)
 
 
 class TestId:
@@ -146,6 +150,58 @@ class TestDuration:
     def test_signed_invalid(self, value):
         with pytest.raises(ValidationError):
             signed_durations.validate_python(value)
+
+
+class TestUri:
+    @pytest.mark.parametrize(
+        "value",
+        [
+            "https://example.com/foo?bar=baz#frag",
+            "mailto:cyrus@example.com",
+            "urn:ietf:rfc:3986",
+            "data:text/plain;charset=utf-8,hello%20world",
+            "http://example.com/a%2Fb",
+            "http://user@example.com:8080/path",
+            "http://[2001:db8::1]/",
+            "file:///etc/hosts",
+            "foo:",
+        ],
+    )
+    def test_valid(self, value):
+        assert uris.validate_python(value) == value
+
+    @pytest.mark.parametrize(
+        "value",
+        [
+            "example.com/no-scheme",
+            "http://exa mple.com",
+            "http://example.com/%zz",
+            "http://example.com/%2",
+            "http://example.com/café",
+            "http://example.com/{braces}",
+            "https://example.com/#one#two",
+            "http://[not-ipv6]/",
+            "http://example.com:abc/",
+            "",
+        ],
+    )
+    def test_invalid(self, value):
+        with pytest.raises(ValidationError):
+            uris.validate_python(value)
+
+
+class TestColor:
+    @pytest.mark.parametrize("value", ["turquoise", "DarkSlateGray", "#deb887", "#00FF00"])
+    def test_valid(self, value):
+        assert colors.validate_python(value) == value
+
+    @pytest.mark.parametrize(
+        "value",
+        ["notacolor", "rebeccapurple", "#abc", "#12345", "#1234567", "#00ff0g", "rgb(0,0,0)", ""],
+    )
+    def test_invalid(self, value):
+        with pytest.raises(ValidationError):
+            colors.validate_python(value)
 
 
 class TestTimeZoneId:

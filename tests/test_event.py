@@ -135,6 +135,8 @@ class TestWhatAndWhere:
         assert event(color="#123ABC")
         with pytest.raises(ValidationError):
             event(color="#123")
+        with pytest.raises(ValidationError):
+            event(color="notacolor")
 
 
 class TestSchedulingProperties:

@@ -5,6 +5,7 @@ from typing import Annotated, Literal
 from pydantic import Field, ValidationError, model_validator
 
 from json_calendar._patch import apply_patch
+from json_calendar._spec import cites
 from json_calendar._types import (
     Email,
     Id,
@@ -55,8 +56,8 @@ def _ignored_in_override(tokens: list[str]) -> bool:
     )
 
 
-FreeBusyStatus = Annotated[str, open_enum("free", "busy")]
-Privacy = Annotated[str, open_enum("public", "private", "secret")]
+FreeBusyStatus = Annotated[str, open_enum("free", "busy"), cites("Section 3.4.2")]
+Privacy = Annotated[str, open_enum("public", "private", "secret"), cites("Section 3.4.3")]
 ItipMethod = Literal[
     "publish", "request", "reply", "add", "cancel", "refresh", "counter", "declinecounter"
 ]
@@ -65,7 +66,7 @@ ItipMethod = Literal[
 class CalendarObject(JSCalendarObject):
     """The properties common to Event and Task objects (Section 3)."""
 
-    uid: str = Field(min_length=1)
+    uid: Annotated[str, Field(min_length=1), cites("Section 3.1.1")]
     # Mandatory for standalone objects; the Group entry subclasses override
     # this field because entries must not set it (Section 3.1.2).
     version: JSCalendarVersion
@@ -91,7 +92,7 @@ class CalendarObject(JSCalendarObject):
     recurrenceIdTimeZone: TimeZoneId | None = None
     recurrenceRule: RecurrenceRule | None = None
     recurrenceOverrides: dict[LocalDateTime, PatchObject] | None = None
-    priority: Annotated[int, Field(strict=True, ge=0, le=9)] = 0
+    priority: Annotated[int, Field(strict=True, ge=0, le=9), cites("Section 3.4.1")] = 0
     freeBusyStatus: FreeBusyStatus = "busy"
     privacy: Privacy = "public"
     organizerCalendarAddress: Uri | None = None
@@ -105,22 +106,30 @@ class CalendarObject(JSCalendarObject):
         if self.mainLocationId is not None:
             location = (self.locations or {}).get(self.mainLocationId)
             if location is None:
-                raise ValueError('"mainLocationId" must match a key in the "locations" property')
+                raise ValueError(
+                    '"mainLocationId" must match a key in the "locations" property (Section 3.2.6)'
+                )
             if location.name is None:
-                raise ValueError('the main Location must have its "name" property set')
+                raise ValueError(
+                    'the main Location must have its "name" property set (Section 3.2.6)'
+                )
         if self.recurrenceId is not None:
             if self.recurrenceRule is not None or self.recurrenceOverrides is not None:
                 raise ValueError(
                     'if "recurrenceId" is set, the "recurrenceRule" and '
-                    '"recurrenceOverrides" properties must not be set'
+                    '"recurrenceOverrides" properties must not be set (Section 3.3.1)'
                 )
         elif self.recurrenceIdTimeZone is not None:
-            raise ValueError('"recurrenceIdTimeZone" must not be set if "recurrenceId" is not set')
+            raise ValueError(
+                '"recurrenceIdTimeZone" must not be set if "recurrenceId" '
+                "is not set (Section 3.3.2)"
+            )
         for recurrence_id, patch in (self.recurrenceOverrides or {}).items():
             if "excluded" in patch:
                 if patch != {"excluded": True}:
                     raise ValueError(
-                        'an override excluding an occurrence must be exactly {"excluded": true}'
+                        "an override excluding an occurrence must be exactly "
+                        '{"excluded": true} (Section 3.3.4)'
                     )
                 continue
             occurrence = self.model_dump(
@@ -137,7 +146,7 @@ class CalendarObject(JSCalendarObject):
             except ValidationError as error:
                 raise ValueError(
                     f"the {recurrence_id.isoformat()} override patches the occurrence "
-                    f"into an invalid object: {error}"
+                    f"into an invalid object (Section 3.3.4): {error}"
                 ) from error
         has_scheduled_participant = any(
             participant.calendarAddress is not None
@@ -146,15 +155,16 @@ class CalendarObject(JSCalendarObject):
         if has_scheduled_participant and self.organizerCalendarAddress is None:
             raise ValueError(
                 'if any participant has "calendarAddress" set, the '
-                '"organizerCalendarAddress" property must be set'
+                '"organizerCalendarAddress" property must be set (Section 3.4.4)'
             )
         if self.organizerCalendarAddress is not None and not has_scheduled_participant:
             raise ValueError(
                 'if "organizerCalendarAddress" is set, at least one participant '
-                'must have the "calendarAddress" property set'
+                'must have the "calendarAddress" property set (Section 3.4.4)'
             )
         if self.sentBy is not None and self.organizerCalendarAddress is None:
             raise ValueError(
-                'if "sentBy" is set, the "organizerCalendarAddress" property must be set'
+                'if "sentBy" is set, the "organizerCalendarAddress" property '
+                "must be set (Section 3.4.5)"
             )
         return self

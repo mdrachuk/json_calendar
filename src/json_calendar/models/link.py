@@ -4,10 +4,13 @@ from typing import Annotated, Literal
 
 from pydantic import Field, model_validator
 
+from json_calendar._spec import cites
 from json_calendar._types import UnsignedInt, Uri, open_enum
 from json_calendar.models._base import JSCalendarObject
 
-DisplayValue = Annotated[str, open_enum("badge", "graphic", "fullsize", "thumbnail")]
+DisplayValue = Annotated[
+    str, open_enum("badge", "graphic", "fullsize", "thumbnail"), cites("Section 1.5.11")
+]
 
 
 class Link(JSCalendarObject):
@@ -24,5 +27,7 @@ class Link(JSCalendarObject):
     @model_validator(mode="after")
     def _display_requires_icon_rel(self) -> "Link":
         if self.display is not None and self.rel != "icon":
-            raise ValueError('if "display" is set, the "rel" property must be set to "icon"')
+            raise ValueError(
+                'if "display" is set, the "rel" property must be set to "icon" (Section 1.5.11)'
+            )
         return self

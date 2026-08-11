@@ -17,12 +17,17 @@ from pydantic import (
 )
 
 from json_calendar._patch import check_no_prefix_collisions, parse_pointer
+from json_calendar._spec import cites
 
 MAX_INT = 2**53 - 1
 
-Id = Annotated[str, StringConstraints(min_length=1, max_length=255, pattern=r"^[A-Za-z0-9\-_]+$")]
-Int = Annotated[int, Field(strict=True, ge=-MAX_INT, le=MAX_INT)]
-UnsignedInt = Annotated[int, Field(strict=True, ge=0, le=MAX_INT)]
+Id = Annotated[
+    str,
+    StringConstraints(min_length=1, max_length=255, pattern=r"^[A-Za-z0-9\-_]+$"),
+    cites("Section 1.5.1"),
+]
+Int = Annotated[int, Field(strict=True, ge=-MAX_INT, le=MAX_INT), cites("Section 1.5.2")]
+UnsignedInt = Annotated[int, Field(strict=True, ge=0, le=MAX_INT), cites("Section 1.5.3")]
 
 _UTC_DATE_TIME = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$")
 _LOCAL_DATE_TIME = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$")
@@ -68,6 +73,7 @@ UTCDateTime = Annotated[
     PlainSerializer(
         lambda dt: dt.strftime("%Y-%m-%dT%H:%M:%SZ"), return_type=str, when_used="json"
     ),
+    cites("Section 1.5.4"),
 ]
 """RFC 3339 "date-time" restricted to uppercase letters and a "Z" offset."""
 
@@ -75,14 +81,17 @@ LocalDateTime = Annotated[
     datetime,
     BeforeValidator(_parse_local_date_time),
     PlainSerializer(lambda dt: dt.strftime("%Y-%m-%dT%H:%M:%S"), return_type=str, when_used="json"),
+    cites("Section 1.5.5"),
 ]
 """A date-time without zone/offset information, naive on the Python side."""
 
 _DUR_TIME = r"T(?:\d+H(?:\d+M(?:\d+S)?)?|\d+M(?:\d+S)?|\d+S)"
 _DURATION = rf"P(?:(?:\d+W(?:\d+D)?|\d+D)(?:{_DUR_TIME})?|{_DUR_TIME})"
 
-Duration = Annotated[str, StringConstraints(pattern=rf"^{_DURATION}$")]
-SignedDuration = Annotated[str, StringConstraints(pattern=rf"^[+-]?{_DURATION}$")]
+Duration = Annotated[str, StringConstraints(pattern=rf"^{_DURATION}$"), cites("Section 1.5.6")]
+SignedDuration = Annotated[
+    str, StringConstraints(pattern=rf"^[+-]?{_DURATION}$"), cites("Section 1.5.7")
+]
 
 
 def _check_time_zone_id(value: str) -> str:
@@ -93,7 +102,7 @@ def _check_time_zone_id(value: str) -> str:
     return value
 
 
-TimeZoneId = Annotated[str, AfterValidator(_check_time_zone_id)]
+TimeZoneId = Annotated[str, AfterValidator(_check_time_zone_id), cites("Section 1.5.8")]
 
 
 def _check_patch_object(patch: dict[str, Any]) -> dict[str, Any]:
@@ -101,7 +110,7 @@ def _check_patch_object(patch: dict[str, Any]) -> dict[str, Any]:
     return patch
 
 
-PatchObject = Annotated[dict[str, Any], AfterValidator(_check_patch_object)]
+PatchObject = Annotated[dict[str, Any], AfterValidator(_check_patch_object), cites("Section 1.5.9")]
 """An unordered set of patches on a JSON object (Section 1.5.9).
 
 Each key is a JSON Pointer with an implicit leading "/". The type checks
@@ -110,7 +119,42 @@ that depend on the object being patched are checked where the patch is
 applied (e.g. "recurrenceOverrides", Section 3.3.4).
 """
 
-_URI = re.compile(r"^[A-Za-z][A-Za-z0-9+.\-]*:\S+$")
+# The "URI" rule of RFC 3986, transcribed from the collected ABNF of Appendix A.
+_UNRESERVED = r"A-Za-z0-9\-._~"
+_SUB_DELIMS = r"!$&'()*+,;="
+_PCT_ENCODED = r"%[0-9A-Fa-f]{2}"
+_PCHAR = rf"(?:[{_UNRESERVED}{_SUB_DELIMS}:@]|{_PCT_ENCODED})"
+_DEC_OCTET = r"(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)"
+_IPV4_ADDRESS = rf"{_DEC_OCTET}(?:\.{_DEC_OCTET}){{3}}"
+_H16 = r"[0-9A-Fa-f]{1,4}"
+_LS32 = rf"(?:{_H16}:{_H16}|{_IPV4_ADDRESS})"
+_IPV6_ADDRESS = (
+    rf"(?:(?:{_H16}:){{6}}{_LS32}"
+    rf"|::(?:{_H16}:){{5}}{_LS32}"
+    rf"|{_H16}?::(?:{_H16}:){{4}}{_LS32}"
+    rf"|(?:(?:{_H16}:){{0,1}}{_H16})?::(?:{_H16}:){{3}}{_LS32}"
+    rf"|(?:(?:{_H16}:){{0,2}}{_H16})?::(?:{_H16}:){{2}}{_LS32}"
+    rf"|(?:(?:{_H16}:){{0,3}}{_H16})?::{_H16}:{_LS32}"
+    rf"|(?:(?:{_H16}:){{0,4}}{_H16})?::{_LS32}"
+    rf"|(?:(?:{_H16}:){{0,5}}{_H16})?::{_H16}"
+    rf"|(?:(?:{_H16}:){{0,6}}{_H16})?::)"
+)
+_IP_LITERAL = rf"\[(?:{_IPV6_ADDRESS}|v[0-9A-Fa-f]+\.[{_UNRESERVED}{_SUB_DELIMS}:]+)\]"
+_REG_NAME = rf"(?:[{_UNRESERVED}{_SUB_DELIMS}]|{_PCT_ENCODED})*"
+_HOST = rf"(?:{_IP_LITERAL}|{_IPV4_ADDRESS}|{_REG_NAME})"
+_USERINFO = rf"(?:[{_UNRESERVED}{_SUB_DELIMS}:]|{_PCT_ENCODED})*"
+_AUTHORITY = rf"(?:{_USERINFO}@)?{_HOST}(?::\d*)?"
+_HIER_PART = (
+    rf"(?://{_AUTHORITY}(?:/{_PCHAR}*)*"  # authority + path-abempty
+    rf"|/(?:{_PCHAR}+(?:/{_PCHAR}*)*)?"  # path-absolute
+    rf"|{_PCHAR}+(?:/{_PCHAR}*)*"  # path-rootless
+    rf")?"  # path-empty
+)
+_QUERY_OR_FRAGMENT = rf"(?:[{_UNRESERVED}{_SUB_DELIMS}:@/?]|{_PCT_ENCODED})*"
+_URI = re.compile(
+    rf"^[A-Za-z][A-Za-z0-9+.\-]*:{_HIER_PART}"
+    rf"(?:\?{_QUERY_OR_FRAGMENT})?(?:#{_QUERY_OR_FRAGMENT})?$"
+)
 _EMAIL = re.compile(r"^[^@\s]+@[^@\s]+$")
 _LANGUAGE_TAG = re.compile(r"^[A-Za-z]{1,8}(-[A-Za-z0-9]{1,8})*$")
 
@@ -145,13 +189,13 @@ def _check_email(value: str) -> str:
 
 def _check_language_tag(value: str) -> str:
     if not _LANGUAGE_TAG.match(value):
-        raise ValueError(f"{value!r} is not an RFC 5646 language tag")
+        raise ValueError(f"{value!r} is not a language tag")
     return value
 
 
-Uri = Annotated[str, AfterValidator(_check_uri)]
-Email = Annotated[str, AfterValidator(_check_email)]
-LanguageTag = Annotated[str, AfterValidator(_check_language_tag)]
+Uri = Annotated[str, AfterValidator(_check_uri), cites("RFC 3986")]
+Email = Annotated[str, AfterValidator(_check_email), cites("RFC 5322, Section 3.4.1")]
+LanguageTag = Annotated[str, AfterValidator(_check_language_tag), cites("RFC 5646")]
 
 
 def open_enum(*known: str) -> AfterValidator:

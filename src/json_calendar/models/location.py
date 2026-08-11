@@ -4,6 +4,7 @@ from typing import Annotated, Literal
 
 from pydantic import AfterValidator, Field, model_validator
 
+from json_calendar._spec import cites
 from json_calendar._types import Id, Uri, open_enum
 from json_calendar.models._base import JSCalendarObject
 from json_calendar.models.link import Link
@@ -15,9 +16,11 @@ def _check_geo_uri(value: str) -> str:
     return value
 
 
-GeoUri = Annotated[str, AfterValidator(_check_geo_uri)]
+GeoUri = Annotated[str, AfterValidator(_check_geo_uri), cites("RFC 5870")]
 FeatureValue = Annotated[
-    str, open_enum("audio", "chat", "feed", "moderator", "phone", "screen", "video")
+    str,
+    open_enum("audio", "chat", "feed", "moderator", "phone", "screen", "video"),
+    cites("Section 3.2.7"),
 ]
 
 
@@ -34,7 +37,9 @@ class Location(JSCalendarObject):
     def _requires_a_property(self) -> "Location":
         set_fields = self.model_fields_set - {"type"}
         if not set_fields and not self.__pydantic_extra__:
-            raise ValueError('a Location must have at least one property other than "@type"')
+            raise ValueError(
+                'a Location must have at least one property other than "@type" (Section 3.2.5)'
+            )
         return self
 
 

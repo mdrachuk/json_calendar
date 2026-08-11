@@ -7,6 +7,7 @@ from typing import Annotated, Any, Literal
 from pydantic import Field, ValidatorFunctionWrapHandler, WrapValidator
 from pydantic.json_schema import SkipJsonSchema
 
+from json_calendar._spec import cites
 from json_calendar._types import Id, LanguageTag, Uri, UTCDateTime
 from json_calendar.models._base import (
     Color,
@@ -23,7 +24,7 @@ class Group(JSCalendarObject):
     """A collection of Event and/or Task objects (Sections 2.3 and 4.3)."""
 
     type: Literal["Group"] = Field(alias="@type")
-    uid: str = Field(min_length=1)
+    uid: Annotated[str, Field(min_length=1), cites("Section 3.1.1")]
     version: JSCalendarVersion
     prodId: str | None = None
     created: UTCDateTime | None = None
@@ -66,17 +67,17 @@ def _dispatch_entry(value: Any, handler: ValidatorFunctionWrapHandler) -> Any:
         if "version" in value.model_fields_set:
             raise ValueError(
                 'Event and Task objects in the "entries" of a Group must not '
-                'set the "version" property'
+                'set the "version" property (Section 3.1.2)'
             )
         return value
     if isinstance(value, dict):
         entry_type = value.get("@type")
         if entry_type is None:
-            raise ValueError('Group entries must set the "@type" property')
+            raise ValueError('Group entries must set the "@type" property (Section 4.3.1)')
         if entry_type in ("Event", "Task") and "version" in value:
             raise ValueError(
                 'Event and Task objects in the "entries" of a Group must not '
-                'set the "version" property'
+                'set the "version" property (Section 3.1.2)'
             )
         if entry_type == "Event":
             return _EventEntry.model_validate(value)

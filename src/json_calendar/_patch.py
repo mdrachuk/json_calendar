@@ -33,16 +33,19 @@ def apply_patch(
                 if token not in node:
                     raise ValueError(
                         f"{token!r} in the pointer {pointer!r} does not exist "
-                        f"in the object being patched"
+                        f"in the object being patched (Section 1.5.9)"
                     )
                 node = node[token]
             else:
-                raise ValueError(f"the pointer {pointer!r} references inside a scalar value")
+                raise ValueError(
+                    f"the pointer {pointer!r} references inside a scalar value (Section 1.5.9)"
+                )
         last = tokens[-1]
         if isinstance(node, list):
             if value is None:
                 raise ValueError(
-                    f"the patch value for the array index pointer {pointer!r} must not be null"
+                    f"the patch value for the array index pointer {pointer!r} "
+                    f"must not be null (Section 1.5.9)"
                 )
             node[_index(last, node, pointer)] = value
         elif isinstance(node, dict):
@@ -51,7 +54,9 @@ def apply_patch(
             else:
                 node[last] = value
         else:
-            raise ValueError(f"the pointer {pointer!r} references inside a scalar value")
+            raise ValueError(
+                f"the pointer {pointer!r} references inside a scalar value (Section 1.5.9)"
+            )
     return target
 
 
@@ -60,7 +65,7 @@ def parse_pointer(key: str) -> list[str]:
     tokens = []
     for token in key.split("/"):
         if _BAD_ESCAPE.search(token):
-            raise ValueError(f"invalid escape sequence in the JSON Pointer {key!r}")
+            raise ValueError(f"invalid escape sequence in the JSON Pointer {key!r} (RFC 6901)")
         tokens.append(token.replace("~1", "/").replace("~0", "~"))
     return tokens
 
@@ -76,8 +81,11 @@ def check_no_prefix_collisions(pointers: Mapping[str, list[str]]) -> None:
 
 def _index(token: str, array: list[Any], pointer: str) -> int:
     if not _ARRAY_INDEX.match(token):
-        raise ValueError(f"{token!r} in the pointer {pointer!r} is not an array index")
+        raise ValueError(f"{token!r} in the pointer {pointer!r} is not an array index (RFC 6901)")
     index = int(token)
     if index >= len(array):
-        raise ValueError(f"no array member at {token!r} exists to patch by the pointer {pointer!r}")
+        raise ValueError(
+            f"no array member at {token!r} exists to patch by the pointer {pointer!r} "
+            f"(Section 1.5.9)"
+        )
     return index

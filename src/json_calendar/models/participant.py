@@ -4,16 +4,27 @@ from typing import Annotated, Literal
 
 from pydantic import Field, model_validator
 
+from json_calendar._spec import cites
 from json_calendar._types import Email, Id, Uri, open_enum
 from json_calendar.models._base import JSCalendarObject, TextContentType
 from json_calendar.models.link import Link
 
-ParticipantKind = Annotated[str, open_enum("individual", "group", "location", "resource")]
-RoleValue = Annotated[str, open_enum("owner", "optional", "informational", "chair", "required")]
-ParticipationStatus = Annotated[
-    str, open_enum("needs-action", "accepted", "declined", "tentative", "delegated")
+ParticipantKind = Annotated[
+    str, open_enum("individual", "group", "location", "resource"), cites("Section 3.4.6")
 ]
-ParticipantProgress = Annotated[str, open_enum("in-process", "completed", "failed")]
+RoleValue = Annotated[
+    str,
+    open_enum("owner", "optional", "informational", "chair", "required"),
+    cites("Section 3.4.6"),
+]
+ParticipationStatus = Annotated[
+    str,
+    open_enum("needs-action", "accepted", "declined", "tentative", "delegated"),
+    cites("Section 3.4.6"),
+]
+ParticipantProgress = Annotated[
+    str, open_enum("in-process", "completed", "failed"), cites("Section 3.4.6")
+]
 
 
 class Participant(JSCalendarObject):
@@ -37,7 +48,9 @@ class Participant(JSCalendarObject):
     memberOf: dict[str, Literal[True]] | None = Field(default=None, min_length=1)
     links: dict[Id, Link] | None = Field(default=None, min_length=1)
     progress: ParticipantProgress | None = None
-    percentComplete: Annotated[int, Field(strict=True, ge=0, le=100)] | None = None
+    percentComplete: Annotated[int, Field(strict=True, ge=0, le=100), cites("Section 4.2.4")] | (
+        None
+    ) = None
 
     _REQUIRE_CALENDAR_ADDRESS = (
         "email",
@@ -58,12 +71,16 @@ class Participant(JSCalendarObject):
             for name in self._REQUIRE_CALENDAR_ADDRESS:
                 if name in self.model_fields_set:
                     raise ValueError(
-                        f'if "{name}" is set, the "calendarAddress" property must be set'
+                        f'if "{name}" is set, the "calendarAddress" property '
+                        f"must be set (Section 3.4.6)"
                     )
         if self.descriptionContentType is not None and self.description is None:
             raise ValueError(
-                'if "descriptionContentType" is set, the "description" property must be set'
+                'if "descriptionContentType" is set, the "description" property '
+                "must be set (Section 3.4.6)"
             )
         if self.progress is not None and self.participationStatus != "accepted":
-            raise ValueError('if "progress" is set, "participationStatus" must be "accepted"')
+            raise ValueError(
+                'if "progress" is set, "participationStatus" must be "accepted" (Section 3.4.6)'
+            )
         return self

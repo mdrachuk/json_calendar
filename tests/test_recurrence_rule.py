@@ -40,6 +40,34 @@ class TestParts:
         with pytest.raises(ValidationError):
             rule(interval=0)
 
+    def test_interval_is_an_unsigned_int(self):
+        assert rule(interval=2**53 - 1).interval == 2**53 - 1
+        with pytest.raises(ValidationError):
+            rule(interval=2**53)
+
+    @pytest.mark.parametrize(
+        "value",
+        [
+            "gregorian",
+            "gregory",
+            "chinese",
+            "hebrew",
+            "islamic-umalqura",
+            "ethiopic-amete-alem",
+            "islamicc",
+        ],
+    )
+    def test_rscale_accepts_cldr_calendar_systems_and_aliases(self, value):
+        assert rule(rscale=value).rscale == value
+
+    def test_rscale_accepts_vendor_specific_values(self):
+        assert rule(rscale="example.com:lunar").rscale == "example.com:lunar"
+
+    @pytest.mark.parametrize("value", ["GREGORIAN", "Chinese", "not a calendar", "klingon", ""])
+    def test_rscale_rejects_unregistered_values(self, value):
+        with pytest.raises(ValidationError):
+            rule(rscale=value)
+
     def test_skip_values(self):
         assert rule(skip="backward").skip == "backward"
         with pytest.raises(ValidationError):
@@ -70,11 +98,33 @@ class TestParts:
             rule(byMonthDay=[])
 
     def test_by_month(self):
-        assert rule(byMonth=["1", "3L"]).byMonth == ["1", "3L"]
+        assert rule(byMonth=["1", "12"]).byMonth == ["1", "12"]
+        assert rule(rscale="chinese", byMonth=["3L"]).byMonth == ["3L"]
         with pytest.raises(ValidationError):
             rule(byMonth=["3l"])
         with pytest.raises(ValidationError):
             rule(byMonth=[3])
+
+    @pytest.mark.parametrize("value", ["0", "00", "123", "999L", ""])
+    def test_by_month_rejects_malformed_numbers_in_any_calendar(self, value):
+        with pytest.raises(ValidationError):
+            rule(rscale="chinese", byMonth=[value])
+
+    def test_by_month_allows_a_leading_zero(self):
+        assert rule(byMonth=["07"]).byMonth == ["07"]
+
+    @pytest.mark.parametrize("value", ["0", "13", "3L"])
+    def test_by_month_gregorian_bounds(self, value):
+        with pytest.raises(ValidationError):
+            rule(byMonth=[value])
+
+    def test_by_month_13_is_valid_outside_gregorian(self):
+        assert rule(rscale="ethiopic", byMonth=["13"]).byMonth == ["13"]
+
+    @pytest.mark.parametrize("rscale", ["gregory", "iso8601"])
+    def test_by_month_bounds_apply_to_gregorian_aliases(self, rscale):
+        with pytest.raises(ValidationError):
+            rule(rscale=rscale, byMonth=["13"])
 
     def test_by_year_day(self):
         assert rule(byYearDay=[100, -366]).byYearDay == [100, -366]

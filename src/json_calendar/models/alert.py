@@ -6,11 +6,12 @@ from typing import Annotated, Any, Literal
 
 from pydantic import BeforeValidator, Field, model_validator
 
+from json_calendar._spec import cites
 from json_calendar._types import SignedDuration, UTCDateTime, open_enum
 from json_calendar.models._base import JSCalendarObject
 from json_calendar.models.relation import Relation
 
-AlertAction = Annotated[str, open_enum("display", "email")]
+AlertAction = Annotated[str, open_enum("display", "email"), cites("Section 3.5.1")]
 
 
 class Alert(JSCalendarObject):

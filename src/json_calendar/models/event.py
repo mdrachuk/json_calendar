@@ -4,10 +4,13 @@ from typing import Annotated, Literal
 
 from pydantic import Field, model_validator
 
+from json_calendar._spec import cites
 from json_calendar._types import Duration, LocalDateTime, TimeZoneId, open_enum
 from json_calendar.models.calendar_object import CalendarObject
 
-EventStatus = Annotated[str, open_enum("confirmed", "cancelled", "tentative")]
+EventStatus = Annotated[
+    str, open_enum("confirmed", "cancelled", "tentative"), cites("Section 4.1.4")
+]
 
 
 class Event(CalendarObject):
@@ -22,12 +25,15 @@ class Event(CalendarObject):
     @model_validator(mode="after")
     def _validate_event(self) -> "Event":
         if self.endTimeZone is not None and self.timeZone is None:
-            raise ValueError('"endTimeZone" must not be set if the "timeZone" property is not set')
+            raise ValueError(
+                '"endTimeZone" must not be set if the "timeZone" property '
+                "is not set (Section 4.1.3)"
+            )
         for participant in (self.participants or {}).values():
             for name in ("progress", "percentComplete"):
                 if name in participant.model_fields_set:
                     raise ValueError(
                         f'the participant "{name}" property is only allowed '
-                        f"for participants of a Task"
+                        f"for participants of a Task (Section 3.4.6)"
                     )
         return self
