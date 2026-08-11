@@ -3,9 +3,9 @@
 Spec: https://www.ietf.org/archive/id/draft-ietf-calext-jscalendarbis-18.html
 """
 
-from typing import Annotated
+from typing import Annotated, Literal
 
-from pydantic import AfterValidator, BaseModel, ConfigDict, Field, model_validator
+from pydantic import AfterValidator, BaseModel, ConfigDict, model_validator
 
 from json_calendar._types import is_valid_property_name
 
@@ -31,7 +31,9 @@ def _check_color(value: str) -> str:
     return value
 
 
-JSCalendarVersion = Annotated[str, Field(pattern=r"^\d+\.\d+$")]
+# This implementation supports only the JSCalendar version specified in
+# jscalendarbis; version "1.0" objects follow the RFC 8984 schema instead.
+JSCalendarVersion = Literal["2.0"]
 TextContentType = Annotated[str, AfterValidator(_check_text_content_type)]
 Color = Annotated[str, AfterValidator(_check_color)]
 
@@ -47,7 +49,6 @@ class JSCalendarObject(BaseModel):
     """
 
     model_config = ConfigDict(
-        populate_by_name=True,
         serialize_by_alias=True,
         extra="allow",
     )

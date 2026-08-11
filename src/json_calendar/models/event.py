@@ -13,7 +13,7 @@ EventStatus = Annotated[str, open_enum("confirmed", "cancelled", "tentative")]
 class Event(CalendarObject):
     """A scheduled amount of time on a calendar (Sections 2.1 and 4.1)."""
 
-    type: Literal["Event"] = Field(default="Event", alias="@type")
+    type: Literal["Event"] = Field(alias="@type")
     start: LocalDateTime
     duration: Duration = "PT0S"
     endTimeZone: TimeZoneId | None = None

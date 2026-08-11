@@ -36,7 +36,7 @@ class TestBasics:
     def test_json_round_trip(self):
         assert event().model_dump(mode="json", exclude_unset=True) == SIMPLE
 
-    @pytest.mark.parametrize("field", ["uid", "updated", "start"])
+    @pytest.mark.parametrize("field", ["@type", "version", "uid", "updated", "start"])
     def test_mandatory_fields(self, field):
         with pytest.raises(ValidationError):
             event(**{field: None})
@@ -56,9 +56,25 @@ class TestBasics:
         assert parsed.privacy == "public"
         assert parsed.status == "confirmed"
 
-    def test_version_format(self):
+    @pytest.mark.parametrize("version", ["1.0", "2", "2.1", "3.0", "99.99", "02.0"])
+    def test_rejects_versions_other_than_2_0(self, version):
         with pytest.raises(ValidationError):
-            event(version="2")
+            event(version=version)
+
+    def test_type_cannot_be_populated_by_field_name(self):
+        data = {k: v for k, v in SIMPLE.items() if k != "@type"}
+        with pytest.raises(ValidationError):
+            Event.model_validate({**data, "type": "Event"})
+
+    def test_validation_context_cannot_relax_version(self):
+        data = {k: v for k, v in SIMPLE.items() if k != "version"}
+        with pytest.raises(ValidationError):
+            Event.model_validate(data, context={"group_entry": True})
+
+    def test_json_schema_matches_runtime_requirements(self):
+        schema = Event.model_json_schema()
+        assert "@type" in schema["required"]
+        assert "version" in schema["required"]
 
 
 class TestUnknownAndVendorProperties:

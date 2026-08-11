@@ -42,9 +42,19 @@ class TestGroup:
         group = Group.model_validate(SIMPLE)
         assert group.model_dump(mode="json", exclude_unset=True) == SIMPLE
 
-    def test_entries_are_mandatory(self):
+    @pytest.mark.parametrize("field", ["@type", "version", "uid", "updated", "entries"])
+    def test_mandatory_fields(self, field):
         with pytest.raises(ValidationError):
-            Group.model_validate({k: v for k, v in SIMPLE.items() if k != "entries"})
+            Group.model_validate({k: v for k, v in SIMPLE.items() if k != field})
+
+    def test_rejects_unregistered_version(self):
+        with pytest.raises(ValidationError):
+            Group.model_validate({**SIMPLE, "version": "99.99"})
+
+    def test_type_cannot_be_populated_by_field_name(self):
+        data = {k: v for k, v in SIMPLE.items() if k != "@type"}
+        with pytest.raises(ValidationError):
+            Group.model_validate({**data, "type": "Group"})
 
     def test_entries_must_set_their_type(self):
         entry = {k: v for k, v in EVENT_ENTRY.items() if k != "@type"}
@@ -55,6 +65,14 @@ class TestGroup:
         entry = {**EVENT_ENTRY, "version": "2.0"}
         with pytest.raises(ValidationError):
             Group.model_validate({**SIMPLE, "entries": [entry]})
+
+    def test_entry_with_recurrence_overrides_is_valid_without_version(self):
+        entry = {
+            **EVENT_ENTRY,
+            "recurrenceRule": {"frequency": "weekly"},
+            "recurrenceOverrides": {"2020-01-22T13:00:00": {"title": "Rescheduled"}},
+        }
+        assert Group.model_validate({**SIMPLE, "entries": [entry]})
 
     def test_invalid_entry_is_rejected(self):
         entry = {k: v for k, v in EVENT_ENTRY.items() if k != "start"}

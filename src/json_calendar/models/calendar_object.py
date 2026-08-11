@@ -66,7 +66,9 @@ class CalendarObject(JSCalendarObject):
     """The properties common to Event and Task objects (Section 3)."""
 
     uid: str = Field(min_length=1)
-    version: JSCalendarVersion | None = None
+    # Mandatory for standalone objects; the Group entry subclasses override
+    # this field because entries must not set it (Section 3.1.2).
+    version: JSCalendarVersion
     relatedTo: dict[str, Relation] | None = None
     prodId: str | None = None
     created: UTCDateTime | None = None

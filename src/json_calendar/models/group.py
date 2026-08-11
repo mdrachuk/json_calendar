@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Annotated, Any, Literal
 
-from pydantic import BeforeValidator, Field, model_validator
+from pydantic import Field, ValidatorFunctionWrapHandler, WrapValidator
 
 from json_calendar._types import Id, LanguageTag, Uri, UTCDateTime
 from json_calendar.models._base import (
@@ -13,7 +13,6 @@ from json_calendar.models._base import (
     JSCalendarVersion,
     TextContentType,
 )
-from json_calendar.models.calendar_object import CalendarObject
 from json_calendar.models.event import Event
 from json_calendar.models.link import Link
 from json_calendar.models.task import Task
@@ -22,9 +21,9 @@ from json_calendar.models.task import Task
 class Group(JSCalendarObject):
     """A collection of Event and/or Task objects (Sections 2.3 and 4.3)."""
 
-    type: Literal["Group"] = Field(default="Group", alias="@type")
+    type: Literal["Group"] = Field(alias="@type")
     uid: str = Field(min_length=1)
-    version: JSCalendarVersion | None = None
+    version: JSCalendarVersion
     prodId: str | None = None
     created: UTCDateTime | None = None
     updated: UTCDateTime
@@ -39,16 +38,6 @@ class Group(JSCalendarObject):
     entries: list[GroupEntry]
     source: Uri | None = None
 
-    @model_validator(mode="after")
-    def _entries_must_not_set_version(self) -> Group:
-        for entry in self.entries:
-            if isinstance(entry, CalendarObject) and "version" in entry.model_fields_set:
-                raise ValueError(
-                    'Event and Task objects in the "entries" of a Group must not '
-                    'set the "version" property'
-                )
-        return self
-
 
 class UnknownCalendarObject(JSCalendarObject):
     """A Group entry whose "@type" is not recognized; preserved as-is."""
@@ -56,19 +45,48 @@ class UnknownCalendarObject(JSCalendarObject):
     type: str = Field(alias="@type")
 
 
-def _dispatch_entry(value: Any) -> Any:
+class _EventEntry(Event):
+    """An Event in the "entries" of a Group; must not set "version" (Section 3.1.2)."""
+
+    version: None = None
+
+
+class _TaskEntry(Task):
+    """A Task in the "entries" of a Group; must not set "version" (Section 3.1.2)."""
+
+    version: None = None
+
+
+def _dispatch_entry(value: Any, handler: ValidatorFunctionWrapHandler) -> Any:
+    # A wrap validator so that already-validated entries pass through as-is
+    # instead of being re-validated by the union, and so that standalone Event
+    # and Task instances (which must set "version") are rejected outright.
+    if isinstance(value, (Event, Task)):
+        if "version" in value.model_fields_set:
+            raise ValueError(
+                'Event and Task objects in the "entries" of a Group must not '
+                'set the "version" property'
+            )
+        return value
     if isinstance(value, dict):
         entry_type = value.get("@type")
         if entry_type is None:
             raise ValueError('Group entries must set the "@type" property')
+        if entry_type in ("Event", "Task") and "version" in value:
+            raise ValueError(
+                'Event and Task objects in the "entries" of a Group must not '
+                'set the "version" property'
+            )
         if entry_type == "Event":
-            return Event.model_validate(value)
+            return _EventEntry.model_validate(value)
         if entry_type == "Task":
-            return Task.model_validate(value)
+            return _TaskEntry.model_validate(value)
         return UnknownCalendarObject.model_validate(value)
-    return value
+    return handler(value)
 
 
-GroupEntry = Annotated[Event | Task | UnknownCalendarObject, BeforeValidator(_dispatch_entry)]
+GroupEntry = Annotated[
+    _EventEntry | _TaskEntry | UnknownCalendarObject, WrapValidator(_dispatch_entry)
+]
 
 Group.model_rebuild()

@@ -7,6 +7,7 @@ from json_calendar import Event, PatchObject, Task
 
 MASTER = {
     "@type": "Event",
+    "version": "2.0",
     "uid": "e5c5d63b-0e40-4c72-b0b9-b6759f9505fa",
     "updated": "2020-01-02T18:23:04Z",
     "title": "Weekly sync",
@@ -235,6 +236,7 @@ class TestOccurrenceSemantics:
 
 TASK_MASTER = {
     "@type": "Task",
+    "version": "2.0",
     "uid": "0af5e0cf-15fb-4e94-a48f-eb4f0f545c78",
     "updated": "2020-01-02T18:23:04Z",
     "title": "Water plants",

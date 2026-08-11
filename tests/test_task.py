@@ -32,6 +32,11 @@ class TestBasics:
         with pytest.raises(ValidationError):
             task(**{"@type": "Event"})
 
+    @pytest.mark.parametrize("field", ["@type", "version", "uid", "updated"])
+    def test_mandatory_fields(self, field):
+        with pytest.raises(ValidationError):
+            task(**{field: None})
+
 
 class TestDates:
     def test_task_with_due_date(self):
