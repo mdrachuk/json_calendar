@@ -16,6 +16,7 @@ from json_calendar._types import (
     UnsignedInt,
     Uri,
     UTCDateTime,
+    format_local_date_time,
     open_enum,
 )
 from json_calendar.models._base import (
@@ -139,7 +140,7 @@ class CalendarObject(JSCalendarObject):
                 exclude_none=True,
                 exclude={"recurrenceRule", "recurrenceOverrides"},
             )
-            occurrence["recurrenceId"] = recurrence_id.strftime("%Y-%m-%dT%H:%M:%S")
+            occurrence["recurrenceId"] = format_local_date_time(recurrence_id)
             occurrence["start"] = occurrence["recurrenceId"]
             apply_patch(occurrence, patch, ignore=_ignored_in_override)
             try:

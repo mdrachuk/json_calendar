@@ -94,6 +94,10 @@ class TestUTCDateTime:
         parsed = utc.validate_python("2020-01-02T18:23:04Z")
         assert utc.dump_python(parsed, mode="json") == "2020-01-02T18:23:04Z"
 
+    def test_serializes_years_below_1000_zero_padded(self):
+        parsed = utc.validate_python("0001-01-01T00:00:00Z")
+        assert utc.dump_python(parsed, mode="json") == "0001-01-01T00:00:00Z"
+
     def test_accepts_utc_datetime_instance(self):
         value = datetime(2020, 1, 2, 18, 23, 4, tzinfo=UTC)
         assert utc.validate_python(value) == value
@@ -125,6 +129,10 @@ class TestLocalDateTime:
     def test_serializes_to_spec_format(self):
         parsed = local.validate_python("2006-01-02T15:04:05")
         assert local.dump_python(parsed, mode="json") == "2006-01-02T15:04:05"
+
+    def test_serializes_years_below_1000_zero_padded(self):
+        parsed = local.validate_python("0099-01-02T15:04:05")
+        assert local.dump_python(parsed, mode="json") == "0099-01-02T15:04:05"
 
     def test_rejects_aware_datetime_instance(self):
         with pytest.raises(ValidationError):

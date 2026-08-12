@@ -13,6 +13,8 @@ from json_calendar.models.relation import Relation
 
 AlertAction = Annotated[str, open_enum("display", "email"), cites("Section 3.5.1")]
 
+RelativeTo = Annotated[str, open_enum("start", "end"), cites("Section 3.5.1")]
+
 
 class Alert(JSCalendarObject):
     """An alert/reminder for a calendar object (Section 3.5.1)."""
@@ -33,7 +35,7 @@ class OffsetTrigger(JSCalendarObject):
         default="OffsetTrigger", alias="@type"
     )
     offset: Annotated[SignedDuration, cites("Section 3.5.1")]
-    relativeTo: Annotated[Literal["start", "end"], cites("Section 3.5.1")] = "start"
+    relativeTo: RelativeTo = "start"
 
 
 class AbsoluteTrigger(JSCalendarObject):

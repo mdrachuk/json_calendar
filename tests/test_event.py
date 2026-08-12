@@ -96,6 +96,14 @@ class TestUnknownAndVendorProperties:
         with pytest.raises(ValidationError):
             Event.model_validate({**SIMPLE, "not a valid name": 1})
 
+    def test_rejects_the_reserved_property_extra(self):
+        with pytest.raises(ValidationError, match="reserved"):
+            Event.model_validate({**SIMPLE, "extra": {}})
+
+    def test_rejects_case_variants_of_the_reserved_property_extra(self):
+        with pytest.raises(ValidationError, match="differs only in case"):
+            Event.model_validate({**SIMPLE, "eXtra": {}})
+
 
 class TestWhatAndWhere:
     def test_description_content_type_must_be_text(self):
@@ -105,8 +113,14 @@ class TestWhatAndWhere:
 
     def test_description_content_type_charset_must_be_utf8(self):
         assert event(descriptionContentType="text/plain;charset=utf-8")
+        assert event(descriptionContentType='text/plain; charset="utf-8"')
         with pytest.raises(ValidationError):
             event(descriptionContentType="text/plain;charset=latin1")
+
+    @pytest.mark.parametrize("value", ["text", "text/", "text/plain garbage", "text/plain;bad"])
+    def test_description_content_type_must_match_the_media_type_grammar(self, value):
+        with pytest.raises(ValidationError):
+            event(descriptionContentType=value)
 
     def test_main_location_id_must_reference_a_location(self):
         locations = {"1": {"name": "Frankfurt Airport (FRA)"}}

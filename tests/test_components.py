@@ -88,6 +88,25 @@ class TestLink:
         with pytest.raises(ValidationError):
             Link.model_validate({"href": "https://example.com/f", "size": -1})
 
+    @pytest.mark.parametrize("value", ["image/png", "text/plain;charset=utf-8"])
+    def test_content_type_accepts_media_types(self, value):
+        link = Link.model_validate({"href": "https://example.com/f", "contentType": value})
+        assert link.contentType == value
+
+    @pytest.mark.parametrize("value", ["image", "image/", "text/plain garbage", "a/b;c"])
+    def test_content_type_rejects_invalid_media_types(self, value):
+        with pytest.raises(ValidationError):
+            Link.model_validate({"href": "https://example.com/f", "contentType": value})
+
+    @pytest.mark.parametrize("value", ["describedby", "https://example.com/rels/preview"])
+    def test_rel_accepts_link_relation_types(self, value):
+        assert Link.model_validate({"href": "https://example.com/f", "rel": value}).rel == value
+
+    @pytest.mark.parametrize("value", ["not a rel", "Enclosure", ""])
+    def test_rel_rejects_invalid_link_relation_types(self, value):
+        with pytest.raises(ValidationError):
+            Link.model_validate({"href": "https://example.com/f", "rel": value})
+
 
 class TestLocation:
     def test_requires_at_least_one_property(self):
@@ -106,9 +125,24 @@ class TestLocation:
         with pytest.raises(ValidationError):
             Location.model_validate({"coordinates": "40.7829,-73.9654"})
 
+    def test_coordinates_accept_geo_uri_parameters(self):
+        value = "geo:48.2010,16.3695,183;crs=wgs84;u=40;example=p%20v"
+        assert Location.model_validate({"coordinates": value}).coordinates == value
+
+    @pytest.mark.parametrize(
+        "value", ["geo:not a position", "geo:1", "geo:91,0", "geo:0,181", "geo:1,2;u=x"]
+    )
+    def test_coordinates_reject_invalid_geo_uris(self, value):
+        with pytest.raises(ValidationError):
+            Location.model_validate({"coordinates": value})
+
     def test_location_types(self):
         location = Location.model_validate({"locationTypes": {"parking": True}})
         assert location.locationTypes == {"parking": True}
+
+    def test_location_types_must_be_registered(self):
+        with pytest.raises(ValidationError, match="Location Types Registry"):
+            Location.model_validate({"locationTypes": {"spaceship": True}})
 
     def test_links_must_not_be_empty(self):
         with pytest.raises(ValidationError):
@@ -222,6 +256,19 @@ class TestParticipant:
         with pytest.raises(ValidationError):
             Participant.model_validate({"descriptionContentType": "text/html"})
 
+    @pytest.mark.parametrize("key", ["group-1", "mailto:projectA@example.com"])
+    def test_member_of_accepts_id_and_uri_keys(self, key):
+        participant = Participant.model_validate(
+            {"calendarAddress": "mailto:t@example.com", "memberOf": {key: True}}
+        )
+        assert participant.memberOf == {key: True}
+
+    def test_member_of_rejects_keys_that_are_neither_id_nor_uri(self):
+        with pytest.raises(ValidationError, match="neither an Id"):
+            Participant.model_validate(
+                {"calendarAddress": "mailto:t@example.com", "memberOf": {"not valid!": True}}
+            )
+
     def test_progress_requires_accepted_status(self):
         with pytest.raises(ValidationError):
             Participant.model_validate(
@@ -264,6 +311,11 @@ class TestAlert:
         assert isinstance(alert.trigger, UnknownTrigger)
         assert alert.model_dump(mode="json", exclude_unset=True) == data
 
+    @pytest.mark.parametrize("trigger_type", ["offsettrigger", "ABSOLUTETRIGGER", "event"])
+    def test_rejects_trigger_type_differing_only_in_case_from_a_known_type(self, trigger_type):
+        with pytest.raises(ValidationError, match="differs only in case"):
+            Alert.model_validate({"trigger": {"@type": trigger_type, "offset": "PT5M"}})
+
     def test_offset_must_be_signed_duration(self):
         with pytest.raises(ValidationError):
             Alert.model_validate({"trigger": {"offset": "5M"}})
@@ -274,6 +326,12 @@ class TestAlert:
         assert alert.trigger.relativeTo == "end"
         with pytest.raises(ValidationError):
             Alert.model_validate({"trigger": {"offset": "PT5M", "relativeTo": "middle"}})
+
+    def test_relative_to_accepts_vendor_values(self):
+        alert = Alert.model_validate(
+            {"trigger": {"offset": "PT5M", "relativeTo": "example.com:custom"}}
+        )
+        assert alert.trigger.relativeTo == "example.com:custom"
 
     def test_action(self):
         alert = Alert.model_validate({"trigger": {"offset": "-PT5M"}})

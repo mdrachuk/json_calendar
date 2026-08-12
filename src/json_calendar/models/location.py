@@ -1,5 +1,6 @@
 """The Location and VirtualLocation objects (Sections 3.2.5 and 3.2.7)."""
 
+import re
 from typing import Annotated, Literal
 
 from pydantic import AfterValidator, Field, model_validator
@@ -9,14 +10,118 @@ from json_calendar._types import Id, Uri, open_enum
 from json_calendar.models._base import JSCalendarObject
 from json_calendar.models.link import Link
 
+# The "geo-URI" rule of RFC 5870, Section 3.3. The scheme, parameter names,
+# and the "crs" value are case-insensitive (Section 3.4).
+_GEO_NUM = r"-?[0-9]+(?:\.[0-9]+)?"
+_GEO_LABEL = r"[A-Za-z0-9\-]+"
+_GEO_PARAM_CHAR = r"(?:[A-Za-z0-9\-_.!~*'()\[\]:&+$]|%[0-9A-Fa-f]{2})"
+_GEO_URI = re.compile(
+    rf"geo:(?P<a>{_GEO_NUM}),(?P<b>{_GEO_NUM})(?:,{_GEO_NUM})?"
+    rf"(?:;crs=(?P<crs>{_GEO_LABEL}))?"
+    rf"(?:;u=[0-9]+(?:\.[0-9]+)?)?"
+    # "crs" and "u" never re-match as generic parameters: they may appear
+    # only once, in the order above, with the value forms above.
+    rf"(?:;(?!(?:crs|u)\b){_GEO_LABEL}(?:={_GEO_PARAM_CHAR}+)?)*",
+    re.IGNORECASE,
+)
+
 
 def _check_geo_uri(value: str) -> str:
-    if not value.startswith("geo:"):
-        raise ValueError(f"{value!r} is not a 'geo:' URI")
+    match = _GEO_URI.fullmatch(value)
+    if match is None:
+        raise ValueError(f"{value!r} is not a 'geo:' URI (RFC 5870, Section 3.3)")
+    if (match.group("crs") or "wgs84").lower() == "wgs84":
+        latitude, longitude = float(match.group("a")), float(match.group("b"))
+        if abs(latitude) > 90 or abs(longitude) > 180:
+            raise ValueError(
+                f"{value!r} coordinates are outside the WGS-84 ranges of "
+                f"±90 latitude and ±180 longitude (RFC 5870, Section 3.4.2)"
+            )
     return value
 
 
 GeoUri = Annotated[str, AfterValidator(_check_geo_uri), cites("RFC 5870")]
+
+# The tokens of the IANA "Location Types Registry"
+# (https://www.iana.org/assignments/location-type-registry), which
+# "locationTypes" keys MUST be from (Section 3.2.5); the registry collects
+# the RFC 4589 values and later registrations.
+_LOCATION_TYPES = frozenset(
+    {
+        "aircraft",
+        "airport",
+        "arena",
+        "automobile",
+        "bank",
+        "bar",
+        "bicycle",
+        "bus",
+        "bus-station",
+        "cafe",
+        "campground",
+        "care-facility",
+        "classroom",
+        "club",
+        "construction",
+        "convention-center",
+        "detached-unit",
+        "fire-station",
+        "government",
+        "hospital",
+        "hotel",
+        "industrial",
+        "landmark-address",
+        "library",
+        "motorcycle",
+        "municipal-garage",
+        "museum",
+        "office",
+        "other",
+        "outdoors",
+        "parking",
+        "phone-box",
+        "place-of-worship",
+        "post-office",
+        "prison",
+        "public",
+        "public-transport",
+        "residence",
+        "restaurant",
+        "school",
+        "shopping-area",
+        "stadium",
+        "store",
+        "street",
+        "theater",
+        "toll-booth",
+        "town-hall",
+        "train",
+        "train-station",
+        "truck",
+        "underway",
+        "unknown",
+        "utilitybox",
+        "warehouse",
+        "waste-transfer-facility",
+        "water",
+        "water-facility",
+        "watercraft",
+        "youth-camp",
+    }
+)
+
+
+def _check_location_type(value: str) -> str:
+    if value not in _LOCATION_TYPES:
+        raise ValueError(
+            f"{value!r} is not in the IANA Location Types Registry (Section 3.2.5; RFC 4589)"
+        )
+    return value
+
+
+LocationType = Annotated[
+    str, AfterValidator(_check_location_type), cites("Section 3.2.5; RFC 4589")
+]
 FeatureValue = Annotated[
     str,
     open_enum("audio", "chat", "feed", "moderator", "phone", "screen", "video"),
@@ -32,7 +137,7 @@ class Location(JSCalendarObject):
     )
     name: Annotated[str, cites("Section 3.2.5")] | None = None
     locationTypes: Annotated[
-        dict[str, Annotated[Literal[True], cites("Section 3.2.5")]] | None,
+        dict[LocationType, Annotated[Literal[True], cites("Section 3.2.5")]] | None,
         cites("Section 3.2.5"),
     ] = Field(default=None, min_length=1)
     coordinates: GeoUri | None = None

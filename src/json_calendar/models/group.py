@@ -4,12 +4,13 @@ from __future__ import annotations
 
 from typing import Annotated, Any, Literal
 
-from pydantic import Field, ValidatorFunctionWrapHandler, WrapValidator
+from pydantic import Field, ValidatorFunctionWrapHandler, WrapValidator, model_validator
 from pydantic.json_schema import SkipJsonSchema
 
 from json_calendar._spec import cites
 from json_calendar._types import Id, LanguageTag, Uri, UTCDateTime
 from json_calendar.models._base import (
+    _KNOWN_TYPE_NAMES,
     Color,
     JSCalendarObject,
     JSCalendarVersion,
@@ -46,6 +47,16 @@ class UnknownCalendarObject(JSCalendarObject):
 
     type: str = Field(alias="@type")
 
+    @model_validator(mode="after")
+    def _type_is_unknown(self) -> UnknownCalendarObject:
+        # Case variants of known names are left to the Section 1.7.1 rule.
+        if _KNOWN_TYPE_NAMES.get(self.type.lower()) == self.type:
+            raise ValueError(
+                f'{self.type!r} is a known type, and the "entries" of a Group '
+                f"may only hold Event and Task objects (Section 4.3.1)"
+            )
+        return self
+
 
 class _EventEntry(Event):
     """An Event in the "entries" of a Group; must not set "version" (Section 3.1.2)."""
@@ -62,14 +73,15 @@ class _TaskEntry(Task):
 def _dispatch_entry(value: Any, handler: ValidatorFunctionWrapHandler) -> Any:
     # A wrap validator so that already-validated entries pass through as-is
     # instead of being re-validated by the union, and so that standalone Event
-    # and Task instances (which must set "version") are rejected outright.
-    if isinstance(value, (Event, Task)):
-        if "version" in value.model_fields_set:
-            raise ValueError(
-                'Event and Task objects in the "entries" of a Group must not '
-                'set the "version" property (Section 3.1.2)'
-            )
+    # and Task instances (whose required "version" property a Group entry must
+    # not carry, Section 3.1.2) are converted to their entry forms.
+    if isinstance(value, (_EventEntry, _TaskEntry)):
         return value
+    if isinstance(value, (Event, Task)):
+        entry_class = _EventEntry if isinstance(value, Event) else _TaskEntry
+        return entry_class.model_validate(
+            value.model_dump(by_alias=True, exclude_unset=True, exclude={"version"})
+        )
     if isinstance(value, dict):
         entry_type = value.get("@type")
         if entry_type is None:

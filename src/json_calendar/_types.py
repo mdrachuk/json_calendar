@@ -21,6 +21,8 @@ from json_calendar._spec import cites
 
 MAX_INT = 2**53 - 1
 
+_ID = re.compile(r"[A-Za-z0-9\-_]{1,255}")
+
 Id = Annotated[
     str,
     StringConstraints(min_length=1, max_length=255, pattern=r"^[A-Za-z0-9\-_]+$"),
@@ -67,12 +69,20 @@ def _parse_local_date_time(value: Any) -> Any:
     raise ValueError("LocalDateTime must be a string or datetime")
 
 
+# Not strftime("%Y-..."): platform strftime does not reliably zero-pad
+# years below 1000, producing invalid strings such as "1-01-01T00:00:00".
+def format_local_date_time(value: datetime) -> str:
+    """Format a datetime as the 'YYYY-MM-DDTHH:MM:SS' of Section 1.5.5."""
+    return (
+        f"{value.year:04d}-{value.month:02d}-{value.day:02d}"
+        f"T{value.hour:02d}:{value.minute:02d}:{value.second:02d}"
+    )
+
+
 UTCDateTime = Annotated[
     datetime,
     BeforeValidator(_parse_utc_date_time),
-    PlainSerializer(
-        lambda dt: dt.strftime("%Y-%m-%dT%H:%M:%SZ"), return_type=str, when_used="json"
-    ),
+    PlainSerializer(lambda dt: format_local_date_time(dt) + "Z", return_type=str, when_used="json"),
     cites("Section 1.5.4"),
 ]
 """RFC 3339 "date-time" restricted to uppercase letters and a "Z" offset."""
@@ -80,7 +90,7 @@ UTCDateTime = Annotated[
 LocalDateTime = Annotated[
     datetime,
     BeforeValidator(_parse_local_date_time),
-    PlainSerializer(lambda dt: dt.strftime("%Y-%m-%dT%H:%M:%S"), return_type=str, when_used="json"),
+    PlainSerializer(format_local_date_time, return_type=str, when_used="json"),
     cites("Section 1.5.5"),
 ]
 """A date-time without zone/offset information, naive on the Python side."""
@@ -197,6 +207,15 @@ _VENDOR_VALUE = re.compile(rf"{_V_LABEL}(?:\.{_V_LABEL})*:{_V_NAME}")
 # IANA-registered names: ALPHA / DIGIT / "@", notated in lower camel case.
 _IANA_NAME = re.compile(r"@?[a-z][A-Za-z0-9]*")
 
+# Media types: the "restricted-name" rule of RFC 6838, Section 4.2, for the
+# type and subtype names, and the "parameter" rule of RFC 2045, Section 5.1
+# (attribute "=" token or quoted-string), for the optional parameters.
+_RESTRICTED_NAME = r"[A-Za-z0-9][A-Za-z0-9!#$&^_.+\-]{0,126}"
+_MT_TOKEN = r"[!#$%&'*+\-.0-9A-Z^_`a-z{|}~]+"
+_MT_QUOTED_STRING = r'"(?:[\t\x20\x21\x23-\x5b\x5d-\x7e]|\\[\x00-\x7f])*"'
+_MEDIA_TYPE_NAMES = re.compile(rf"({_RESTRICTED_NAME})/({_RESTRICTED_NAME})")
+_MEDIA_TYPE_PARAMETER = re.compile(rf"[ \t]*;[ \t]*({_MT_TOKEN})=({_MT_TOKEN}|{_MT_QUOTED_STRING})")
+
 
 def is_vendor_extension(value: str) -> bool:
     """Return whether ``value`` is a vendor-specific name (Section 1.8.1)."""
@@ -208,8 +227,48 @@ def is_valid_property_name(name: str) -> bool:
     return _IANA_NAME.fullmatch(name) is not None or is_vendor_extension(name)
 
 
+def is_id(value: str) -> bool:
+    """Return whether ``value`` is an Id (Section 1.5.1)."""
+    return _ID.fullmatch(value) is not None
+
+
+def is_uri(value: str) -> bool:
+    """Return whether ``value`` matches the "URI" rule of RFC 3986."""
+    return _URI.fullmatch(value) is not None
+
+
+def parse_media_type(value: str) -> tuple[str, str, list[tuple[str, str]]]:
+    """Parse a media type into its type, subtype, and parameters.
+
+    Quoted-string parameter values are unquoted. Raises ValueError if
+    ``value`` does not match the media type grammar.
+    """
+    names = _MEDIA_TYPE_NAMES.match(value)
+    if names is None:
+        raise ValueError(f"{value!r} is not a media type (RFC 6838, Section 4.2)")
+    parameters = []
+    position = names.end()
+    while position < len(value):
+        parameter = _MEDIA_TYPE_PARAMETER.match(value, position)
+        if parameter is None:
+            raise ValueError(
+                f"{value!r} is not a media type with valid parameters (RFC 2045, Section 5.1)"
+            )
+        parameter_value = parameter.group(2)
+        if parameter_value.startswith('"'):
+            parameter_value = re.sub(r"\\(.)", r"\1", parameter_value[1:-1])
+        parameters.append((parameter.group(1), parameter_value))
+        position = parameter.end()
+    return names.group(1), names.group(2), parameters
+
+
+def _check_media_type(value: str) -> str:
+    parse_media_type(value)
+    return value
+
+
 def _check_uri(value: str) -> str:
-    if not _URI.fullmatch(value):
+    if not is_uri(value):
         raise ValueError(f"{value!r} is not a URI")
     return value
 
@@ -229,6 +288,7 @@ def _check_language_tag(value: str) -> str:
 Uri = Annotated[str, AfterValidator(_check_uri), cites("RFC 3986")]
 Email = Annotated[str, AfterValidator(_check_email), cites("RFC 5322, Section 3.4.1")]
 LanguageTag = Annotated[str, AfterValidator(_check_language_tag), cites("RFC 5646")]
+MediaType = Annotated[str, AfterValidator(_check_media_type), cites("RFC 6838")]
 
 
 def open_enum(*known: str) -> AfterValidator:

@@ -157,6 +157,47 @@ class TestParts:
         assert rule(bySetPosition=[1, -2]).bySetPosition == [1, -2]
         with pytest.raises(ValidationError):
             rule(bySetPosition=[])
+        with pytest.raises(ValidationError):
+            rule(bySetPosition=[0])
+
+    @pytest.mark.parametrize(
+        ("rscale", "field", "value"),
+        [
+            ("buddhist", "byMonth", ["99"]),
+            ("buddhist", "byMonth", ["13"]),
+            ("buddhist", "byMonth", ["3L"]),
+            ("islamic", "byMonth", ["5L"]),
+            ("hebrew", "byMonthDay", [99]),
+            ("hebrew", "byMonthDay", [31]),
+            ("chinese", "byMonthDay", [-31]),
+            ("islamic", "byYearDay", [356]),
+            ("hebrew", "byYearDay", [386]),
+            ("islamic", "byWeekNo", [52]),
+            ("hebrew", "byWeekNo", [-56]),
+        ],
+    )
+    def test_non_gregorian_bounds_are_enforced(self, rscale, field, value):
+        with pytest.raises(ValidationError, match=f"{rscale} calendar system"):
+            rule(rscale=rscale, **{field: value})
+
+    @pytest.mark.parametrize(
+        ("rscale", "field", "value"),
+        [
+            ("hebrew", "byMonth", ["5L"]),
+            ("chinese", "byMonth", ["12L"]),
+            ("coptic", "byMonth", ["13"]),
+            ("hebrew", "byMonthDay", [-30]),
+            ("hebrew", "byYearDay", [385]),
+            ("islamic", "byYearDay", [-355]),
+            ("hebrew", "byWeekNo", [55]),
+            ("islamic", "byWeekNo", [51]),
+        ],
+    )
+    def test_non_gregorian_bounds_admit_valid_values(self, rscale, field, value):
+        assert getattr(rule(rscale=rscale, **{field: value}), field) == value
+
+    def test_vendor_calendar_systems_are_not_bounds_checked(self):
+        assert rule(rscale="example.com:lunar", byMonth=["99L"]).byMonth == ["99L"]
 
 
 class TestBounds:

@@ -86,11 +86,32 @@ class TestGroup:
         with pytest.raises(ValidationError):
             Group.model_validate({**SIMPLE, "entries": [entry]})
 
+    def test_accepts_validated_event_and_task_instances(self):
+        event = Event.model_validate({**EVENT_ENTRY, "version": "2.0"})
+        task = Task.model_validate({**TASK_ENTRY, "version": "2.0"})
+        group = Group.model_validate({**SIMPLE, "entries": [event, task]})
+        assert group.model_dump(mode="json", exclude_unset=True) == SIMPLE
+
+    def test_rejects_nested_group_entries(self):
+        with pytest.raises(ValidationError, match="Event and Task"):
+            Group.model_validate({**SIMPLE, "entries": [SIMPLE]})
+
+    def test_rejects_known_non_entry_types(self):
+        entry = {"@type": "Alert", "trigger": {"offset": "-PT5M"}}
+        with pytest.raises(ValidationError, match="Event and Task"):
+            Group.model_validate({**SIMPLE, "entries": [entry]})
+
     def test_entries_of_unknown_type_are_preserved(self):
         data = {**SIMPLE, "entries": [EVENT_ENTRY, TASK_ENTRY, {"@type": "Note", "text": "hello"}]}
         group = Group.model_validate(data)
         assert len(group.entries) == 3
         assert group.model_dump(mode="json", exclude_unset=True) == data
+
+    @pytest.mark.parametrize("entry_type", ["event", "TASK", "alert"])
+    def test_rejects_entry_type_differing_only_in_case_from_a_known_type(self, entry_type):
+        entry = {**EVENT_ENTRY, "@type": entry_type}
+        with pytest.raises(ValidationError, match="differs only in case"):
+            Group.model_validate({**SIMPLE, "entries": [entry]})
 
     def test_source_must_be_a_uri(self):
         assert Group.model_validate({**SIMPLE, "source": "https://example.com/cal.json"})

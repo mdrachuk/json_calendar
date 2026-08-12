@@ -2,12 +2,19 @@
 
 from typing import Annotated, Literal
 
-from pydantic import Field, model_validator
+from pydantic import AfterValidator, Field, model_validator
 
 from json_calendar._spec import cites
-from json_calendar._types import Email, Id, Uri, open_enum
+from json_calendar._types import Email, Id, Uri, is_id, is_uri, open_enum
 from json_calendar.models._base import JSCalendarObject, TextContentType
 from json_calendar.models.link import Link
+
+
+def _check_id_or_uri(value: str) -> str:
+    if not is_id(value) and not is_uri(value):
+        raise ValueError(f"{value!r} is neither an Id (Section 1.5.1) nor a URI (RFC 3986)")
+    return value
+
 
 ParticipantKind = Annotated[
     str, open_enum("individual", "group", "location", "resource"), cites("Section 3.4.6")
@@ -54,10 +61,14 @@ class Participant(JSCalendarObject):
         dict[Uri, Annotated[Literal[True], cites("Section 3.4.6")]] | None,
         cites("Section 3.4.6"),
     ] = Field(default=None, min_length=1)
-    # The spec gives the type signature Id[Boolean] but requires URI keys; we
-    # keep the keys unconstrained to accept both readings of the draft.
+    # The spec gives the type signature Id[Boolean] but requires URI keys;
+    # keys matching either reading of the draft are accepted, nothing else.
     memberOf: Annotated[
-        dict[str, Annotated[Literal[True], cites("Section 3.4.6")]] | None,
+        dict[
+            Annotated[str, AfterValidator(_check_id_or_uri)],
+            Annotated[Literal[True], cites("Section 3.4.6")],
+        ]
+        | None,
         cites("Section 3.4.6"),
     ] = Field(default=None, min_length=1)
     links: Annotated[dict[Id, Link] | None, cites("Section 3.4.6")] = Field(
