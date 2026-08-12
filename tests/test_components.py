@@ -331,6 +331,7 @@ class TestAlert:
         alert = Alert.model_validate(
             {"trigger": {"offset": "PT5M", "relativeTo": "example.com:custom"}}
         )
+        assert isinstance(alert.trigger, OffsetTrigger)
         assert alert.trigger.relativeTo == "example.com:custom"
 
     def test_action(self):
