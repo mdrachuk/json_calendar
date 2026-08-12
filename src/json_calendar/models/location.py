@@ -12,18 +12,27 @@ from json_calendar.models.link import Link
 
 # The "geo-URI" rule of RFC 5870, Section 3.3. The scheme, parameter names,
 # and the "crs" value are case-insensitive (Section 3.4).
-_GEO_NUM = r"-?[0-9]+(?:\.[0-9]+)?"
+_GEO_PNUM = r"[0-9]+(?:\.[0-9]+)?"
+_GEO_NUM = rf"-?{_GEO_PNUM}"
 _GEO_LABEL = r"[A-Za-z0-9\-]+"
 _GEO_PARAM_CHAR = r"(?:[A-Za-z0-9\-_.!~*'()\[\]:&+$]|%[0-9A-Fa-f]{2})"
 _GEO_URI = re.compile(
     rf"geo:(?P<a>{_GEO_NUM}),(?P<b>{_GEO_NUM})(?:,{_GEO_NUM})?"
     rf"(?:;crs=(?P<crs>{_GEO_LABEL}))?"
-    rf"(?:;u=[0-9]+(?:\.[0-9]+)?)?"
+    rf"(?:;u={_GEO_PNUM})?"
     # "crs" and "u" never re-match as generic parameters: they may appear
-    # only once, in the order above, with the value forms above.
-    rf"(?:;(?!(?:crs|u)\b){_GEO_LABEL}(?:={_GEO_PARAM_CHAR}+)?)*",
+    # only once, in the order above, with the value forms above. The
+    # lookahead spans a whole <pname>, so that extension parameters whose
+    # names merely start with those letters, such as "crs-x", still match.
+    rf"(?:;(?!(?:crs|u)(?:[=;]|$)){_GEO_LABEL}(?:={_GEO_PARAM_CHAR}+)?)*",
     re.IGNORECASE,
 )
+
+# In the default CRS of WGS-84, <coord-a> and <coord-b> are the narrower
+# <latitude> and <longitude> rules of Section 3.3; <coord-c> becomes
+# <altitude>, which is <num> itself and so needs no further check.
+_GEO_LATITUDE = re.compile(r"-?[0-9]{1,2}(?:\.[0-9]+)?")
+_GEO_LONGITUDE = re.compile(r"-?[0-9]{1,3}(?:\.[0-9]+)?")
 
 
 def _check_geo_uri(value: str) -> str:
@@ -31,8 +40,14 @@ def _check_geo_uri(value: str) -> str:
     if match is None:
         raise ValueError(f"{value!r} is not a 'geo:' URI (RFC 5870, Section 3.3)")
     if (match.group("crs") or "wgs84").lower() == "wgs84":
-        latitude, longitude = float(match.group("a")), float(match.group("b"))
-        if abs(latitude) > 90 or abs(longitude) > 180:
+        latitude, longitude = match.group("a"), match.group("b")
+        if not _GEO_LATITUDE.fullmatch(latitude) or not _GEO_LONGITUDE.fullmatch(longitude):
+            raise ValueError(
+                f"{value!r} coordinates are not a WGS-84 <latitude>,<longitude> "
+                f"pair of at most two and three integer digits "
+                f"(RFC 5870, Section 3.3)"
+            )
+        if abs(float(latitude)) > 90 or abs(float(longitude)) > 180:
             raise ValueError(
                 f"{value!r} coordinates are outside the WGS-84 ranges of "
                 f"±90 latitude and ±180 longitude (RFC 5870, Section 3.4.2)"

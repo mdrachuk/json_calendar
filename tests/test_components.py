@@ -125,12 +125,33 @@ class TestLocation:
         with pytest.raises(ValidationError):
             Location.model_validate({"coordinates": "40.7829,-73.9654"})
 
-    def test_coordinates_accept_geo_uri_parameters(self):
-        value = "geo:48.2010,16.3695,183;crs=wgs84;u=40;example=p%20v"
+    @pytest.mark.parametrize(
+        "value",
+        [
+            "geo:48.2010,16.3695,183;crs=wgs84;u=40;example=p%20v",
+            # An extension <pname> may start with "crs" or "u" (Section 3.3).
+            "geo:1,2;crs-x=value",
+            "geo:1,2;crs=wgs84;u=40;u-x=value",
+            # The <latitude>/<longitude> digit limits hold for WGS-84 only.
+            "geo:12345.6,7;crs=Moon-2011",
+        ],
+    )
+    def test_coordinates_accept_geo_uri_parameters(self, value):
         assert Location.model_validate({"coordinates": value}).coordinates == value
 
     @pytest.mark.parametrize(
-        "value", ["geo:not a position", "geo:1", "geo:91,0", "geo:0,181", "geo:1,2;u=x"]
+        "value",
+        [
+            "geo:not a position",
+            "geo:1",
+            "geo:91,0",
+            "geo:0,181",
+            "geo:1,2;u=x",
+            # WGS-84 <latitude> holds at most two, <longitude> three, integer
+            # digits (Section 3.3).
+            "geo:00000001,2",
+            "geo:1,0000",
+        ],
     )
     def test_coordinates_reject_invalid_geo_uris(self, value):
         with pytest.raises(ValidationError):
