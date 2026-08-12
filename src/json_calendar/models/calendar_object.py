@@ -141,7 +141,11 @@ class CalendarObject(JSCalendarObject):
                 exclude={"recurrenceRule", "recurrenceOverrides"},
             )
             occurrence["recurrenceId"] = format_local_date_time(recurrence_id)
-            occurrence["start"] = occurrence["recurrenceId"]
+            # The occurrence inherits every property except the start (or, for a
+            # Task with no start, the due) date-time, which is shifted to match
+            # the recurrence id (Section 3.3.4).
+            shifted = "due" if "due" in occurrence and "start" not in occurrence else "start"
+            occurrence[shifted] = occurrence["recurrenceId"]
             apply_patch(occurrence, patch, ignore=_ignored_in_override)
             try:
                 type(self).model_validate(occurrence)

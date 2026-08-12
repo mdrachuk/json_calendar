@@ -257,3 +257,44 @@ class TestTaskOverrides:
 
     def test_optional_due_may_be_removed(self):
         assert self.task({"due": None})
+
+
+DUE_ONLY_TASK_MASTER = {
+    "@type": "Task",
+    "version": "2.0",
+    "uid": "2f7e1a0c-6b3c-45a4-9a1e-3f9d0f2c4b17",
+    "updated": "2020-01-02T18:23:04Z",
+    "title": "Water plants",
+    "due": "2020-01-09T14:00:00",
+    "timeZone": "Europe/Berlin",
+}
+
+
+class TestDueOnlyTaskOverrides:
+    """A due-only Task shifts "due", not "start", onto the occurrence (Section 3.3.4)."""
+
+    def task(self, patch):
+        return Task.model_validate(
+            {**DUE_ONLY_TASK_MASTER, "recurrenceOverrides": {OCCURRENCE: patch}}
+        )
+
+    def test_removing_the_only_date_time_is_rejected(self):
+        # The occurrence inherits "due" shifted to the recurrence id, so patching
+        # it away leaves neither "due" nor "start" set (Section 4.2).
+        with pytest.raises(ValidationError) as error:
+            self.task({"due": None, "estimatedDuration": "PT1H"})
+        assert 'at least one of the "due" and "start"' in str(error.value)
+
+    def test_occurrences_must_carry_a_start_of_their_own(self):
+        # Every occurrence has "recurrenceId" set, which requires "start"
+        # (Section 4.2.2); the inherited "due" does not satisfy it.
+        with pytest.raises(ValidationError) as error:
+            self.task({})
+        assert '"start" must be set' in str(error.value)
+
+    def test_a_patch_supplying_a_start_is_accepted(self):
+        assert self.task({"start": "2020-01-14T09:00:00"})
+        assert self.task({"due": None, "start": "2020-01-14T09:00:00"})
+
+    def test_an_excluded_occurrence_needs_no_date_time(self):
+        assert self.task({"excluded": True})
