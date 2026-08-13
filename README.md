@@ -39,10 +39,17 @@ from json_calendar import Event
 event = Event.model_validate(
     {
         "@type": "Event",
-        "uid": "2a358cee-6489-4f14-a57f-c104db4dc357",
+        "version": "2.0",
+        "uid": "a8df6573-0474-496d-8496-033ad45d7fea",
+        "updated": "2020-01-02T18:23:04Z",
+        "title": "Some event",
+        "start": "2020-01-15T13:00:00",
+        "timeZone": "America/New_York",
+        "duration": "PT1H",
     }
 )
 
+assert event.start.isoformat() == "2020-01-15T13:00:00"
 print(event.model_dump_json(exclude_unset=True))
 ```
 
