@@ -1,6 +1,8 @@
 """The properties common to Event and Task objects (Section 3)."""
 
-from typing import Annotated, Literal
+from collections.abc import Mapping
+from datetime import datetime
+from typing import Annotated, Any, Literal
 
 from pydantic import Field, ValidationError, model_validator
 
@@ -134,19 +136,7 @@ class CalendarObject(JSCalendarObject):
                         '{"excluded": true} (Section 3.3.4)'
                     )
                 continue
-            occurrence = self.model_dump(
-                mode="json",
-                exclude_unset=True,
-                exclude_none=True,
-                exclude={"recurrenceRule", "recurrenceOverrides"},
-            )
-            occurrence["recurrenceId"] = format_local_date_time(recurrence_id)
-            # The occurrence inherits every property except the start (or, for a
-            # Task with no start, the due) date-time, which is shifted to match
-            # the recurrence id (Section 3.3.4).
-            shifted = "due" if "due" in occurrence and "start" not in occurrence else "start"
-            occurrence[shifted] = occurrence["recurrenceId"]
-            apply_patch(occurrence, patch, ignore=_ignored_in_override)
+            occurrence = occurrence_json(self, recurrence_id, patch)
             try:
                 type(self).model_validate(occurrence)
             except ValidationError as error:
@@ -174,3 +164,28 @@ class CalendarObject(JSCalendarObject):
                 "must be set (Section 3.4.5)"
             )
         return self
+
+
+def occurrence_json(
+    obj: CalendarObject, recurrence_id: datetime, patch: Mapping[str, Any] | None = None
+) -> dict[str, Any]:
+    """The JSON of the occurrence of ``obj`` at ``recurrence_id`` (Section 3.3.4).
+
+    The occurrence inherits every property except the start (or, for a Task
+    with no start, the due) date-time, which is shifted to match the
+    recurrence id, and then has ``patch`` applied to it.
+    """
+    occurrence = obj.model_dump(
+        mode="json",
+        exclude_unset=True,
+        exclude_none=True,
+        exclude={"recurrenceRule", "recurrenceOverrides"},
+    )
+    occurrence["recurrenceId"] = format_local_date_time(recurrence_id)
+    if obj.timeZone is not None:
+        occurrence["recurrenceIdTimeZone"] = obj.timeZone
+    shifted = "due" if "due" in occurrence and "start" not in occurrence else "start"
+    occurrence[shifted] = occurrence["recurrenceId"]
+    if patch:
+        apply_patch(occurrence, patch, ignore=_ignored_in_override)
+    return occurrence
