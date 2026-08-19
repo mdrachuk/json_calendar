@@ -37,6 +37,7 @@ from json_calendar.models import (
     UnknownTrigger,
     VirtualLocation,
 )
+from json_calendar.recurrence import Occurrence, UnsupportedCalendarError, expand
 
 __version__ = "0.1.0"
 
@@ -54,6 +55,7 @@ __all__ = [
     "LocalDateTime",
     "Location",
     "NDay",
+    "Occurrence",
     "OffsetTrigger",
     "Participant",
     "PatchObject",
@@ -66,6 +68,8 @@ __all__ = [
     "UnknownCalendarObject",
     "UnknownTrigger",
     "UnsignedInt",
+    "UnsupportedCalendarError",
     "VirtualLocation",
     "__version__",
+    "expand",
 ]
